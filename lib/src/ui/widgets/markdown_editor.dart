@@ -35,7 +35,9 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     c.value = c.value.copyWith(
       text: c.text.replaceRange(sel.start, sel.end, replacement),
       selection: TextSelection(
-          baseOffset: sel.start + left.length, extentOffset: sel.start + replacement.length - right.length),
+        baseOffset: sel.start + left.length,
+        extentOffset: sel.start + replacement.length - right.length,
+      ),
     );
     _focus.requestFocus();
     _changed();
@@ -75,15 +77,17 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    child: Row(children: [
-                      _tool(Icons.format_bold, 'Bold', () => _wrap('**')),
-                      _tool(Icons.format_italic, 'Italic', () => _wrap('_')),
-                      _tool(Icons.title, 'Heading', () => _prefixLines((_) => '## ')),
-                      _tool(Icons.format_list_bulleted, 'Bullet list', () => _prefixLines((_) => '- ')),
-                      _tool(Icons.format_list_numbered, 'Numbered list', () => _prefixLines((i) => '${i + 1}. ')),
-                      _tool(Icons.check_box_outlined, 'Checklist', () => _prefixLines((_) => '- [ ] ')),
-                      _tool(Icons.link, 'Link', () => _wrap('[', '](https://)')),
-                    ]),
+                    child: Row(
+                      children: [
+                        _tool(Icons.format_bold, 'Bold', () => _wrap('**')),
+                        _tool(Icons.format_italic, 'Italic', () => _wrap('_')),
+                        _tool(Icons.title, 'Heading', () => _prefixLines((_) => '## ')),
+                        _tool(Icons.format_list_bulleted, 'Bullet list', () => _prefixLines((_) => '- ')),
+                        _tool(Icons.format_list_numbered, 'Numbered list', () => _prefixLines((i) => '${i + 1}. ')),
+                        _tool(Icons.check_box_outlined, 'Checklist', () => _prefixLines((_) => '- [ ] ')),
+                        _tool(Icons.link, 'Link', () => _wrap('[', '](https://)')),
+                      ],
+                    ),
                   ),
                 ),
                 SegmentedButton<bool>(
@@ -127,9 +131,9 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   }
 
   Widget _tool(IconData icon, String tip, VoidCallback onTap) => IconButton(
-        icon: Icon(icon, size: 20),
-        tooltip: tip,
-        visualDensity: VisualDensity.compact,
-        onPressed: _preview ? null : onTap,
-      );
+    icon: Icon(icon, size: 20),
+    tooltip: tip,
+    visualDensity: VisualDensity.compact,
+    onPressed: _preview ? null : onTap,
+  );
 }

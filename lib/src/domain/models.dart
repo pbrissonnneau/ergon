@@ -98,12 +98,10 @@ class Reminder {
     this.enabled = true,
   });
 
-  const Reminder.once(LocalDate date, int minute)
-      : this(kind: ReminderKind.once, atDate: date, atMinute: minute);
-  const Reminder.relative(int minutesBefore)
-      : this(kind: ReminderKind.relative, offsetMinutes: minutesBefore);
+  const Reminder.once(LocalDate date, int minute) : this(kind: ReminderKind.once, atDate: date, atMinute: minute);
+  const Reminder.relative(int minutesBefore) : this(kind: ReminderKind.relative, offsetMinutes: minutesBefore);
   const Reminder.repeating(RecurrenceRule rule, int minute)
-      : this(kind: ReminderKind.repeating, repeatRule: rule, atMinute: minute);
+    : this(kind: ReminderKind.repeating, repeatRule: rule, atMinute: minute);
 
   final int? id;
   final ReminderKind kind;
@@ -116,24 +114,23 @@ class Reminder {
   final bool enabled;
 
   Reminder copyWith({int? id, bool? enabled}) => Reminder(
-        id: id ?? this.id,
-        kind: kind,
-        atDate: atDate,
-        atMinute: atMinute,
-        offsetMinutes: offsetMinutes,
-        repeatRule: repeatRule,
-        atUtc: atUtc,
-        occurrenceDate: occurrenceDate,
-        enabled: enabled ?? this.enabled,
-      );
+    id: id ?? this.id,
+    kind: kind,
+    atDate: atDate,
+    atMinute: atMinute,
+    offsetMinutes: offsetMinutes,
+    repeatRule: repeatRule,
+    atUtc: atUtc,
+    occurrenceDate: occurrenceDate,
+    enabled: enabled ?? this.enabled,
+  );
 
   String describe() => switch (kind) {
-        ReminderKind.once => 'On $atDate at ${MinuteOfDay.format(atMinute ?? 0)}',
-        ReminderKind.relative => describeOffset(offsetMinutes ?? 0),
-        ReminderKind.repeating =>
-          '${repeatRule?.describe() ?? 'Repeating'} at ${MinuteOfDay.format(atMinute ?? 0)}',
-        ReminderKind.snooze => 'Snoozed until ${atUtc == null ? '?' : _fmtInstant(atUtc!)}',
-      };
+    ReminderKind.once => 'On $atDate at ${MinuteOfDay.format(atMinute ?? 0)}',
+    ReminderKind.relative => describeOffset(offsetMinutes ?? 0),
+    ReminderKind.repeating => '${repeatRule?.describe() ?? 'Repeating'} at ${MinuteOfDay.format(atMinute ?? 0)}',
+    ReminderKind.snooze => 'Snoozed until ${atUtc == null ? '?' : _fmtInstant(atUtc!)}',
+  };
 
   static String describeOffset(int minutes) {
     if (minutes == 0) return 'At due time';
@@ -169,18 +166,18 @@ class TaskDraft {
   }) : reminders = reminders ?? [];
 
   factory TaskDraft.fromTask(Task t, List<Reminder> reminders) => TaskDraft(
-        title: t.title,
-        description: t.description,
-        parentId: t.parentId,
-        projectId: t.projectId,
-        type: t.type,
-        status: t.status,
-        priority: t.priority,
-        dueDate: t.isRecurring ? null : t.dueDate,
-        dueMinute: t.dueMinute,
-        recurrence: t.recurrence,
-        reminders: reminders.where((r) => r.kind != ReminderKind.snooze).toList(),
-      );
+    title: t.title,
+    description: t.description,
+    parentId: t.parentId,
+    projectId: t.projectId,
+    type: t.type,
+    status: t.status,
+    priority: t.priority,
+    dueDate: t.isRecurring ? null : t.dueDate,
+    dueMinute: t.dueMinute,
+    recurrence: t.recurrence,
+    reminders: reminders.where((r) => r.kind != ReminderKind.snooze).toList(),
+  );
 
   String title;
   String description;

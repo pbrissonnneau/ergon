@@ -51,8 +51,7 @@ class NotificationReconciler {
   Future<ReconcileResult>? _running;
   bool _again = false;
 
-  ReminderPlanner get planner =>
-      ReminderPlanner(defaultDueMinute: settings?.defaultReminderMinute ?? 9 * 60);
+  ReminderPlanner get planner => ReminderPlanner(defaultDueMinute: settings?.defaultReminderMinute ?? 9 * 60);
 
   /// Requests a reconciliation; concurrent requests are coalesced.
   Future<ReconcileResult> reconcile() async {
@@ -77,8 +76,9 @@ class NotificationReconciler {
     return completer.future;
   }
 
-  Future<void> markDelivered(int id) => (db.update(db.scheduledNotifications)..where((n) => n.id.equals(id)))
-      .write(ScheduledNotificationsCompanion(deliveredAt: Value(_clock.now().toUtc().millisecondsSinceEpoch)));
+  Future<void> markDelivered(int id) => (db.update(db.scheduledNotifications)..where((n) => n.id.equals(id))).write(
+    ScheduledNotificationsCompanion(deliveredAt: Value(_clock.now().toUtc().millisecondsSinceEpoch)),
+  );
 
   Future<ReconcileResult> _reconcileOnce() async {
     final now = _clock.now();
@@ -91,7 +91,10 @@ class NotificationReconciler {
     if (enabled) {
       final input = await tasks.tasksWithReminders();
       openTaskIds.addAll(input.map((e) => e.$1.id));
-      final recurringIds = [for (final (t, _) in input) if (t.isRecurring) t.id];
+      final recurringIds = [
+        for (final (t, _) in input)
+          if (t.isRecurring) t.id,
+      ];
       final closed = await tasks.closedOccurrenceDays(recurringIds, LocalDate.fromDateTime(now).addDays(-1));
       for (final p in planner.plan(now: now, tasks: input, closedOccurrenceDays: closed)) {
         planned[p.instanceKey] = p;
@@ -128,13 +131,15 @@ class NotificationReconciler {
     }
 
     // Purge old delivered bookkeeping (frees unique keys too).
-    await (db.delete(db.scheduledNotifications)
-          ..where((n) => n.deliveredAt.isSmallerThanValue(nowMs - const Duration(days: 7).inMilliseconds)))
-        .go();
+    await (db.delete(
+      db.scheduledNotifications,
+    )..where((n) => n.deliveredAt.isSmallerThanValue(nowMs - const Duration(days: 7).inMilliseconds))).go();
 
     for (final p in planned.values) {
       if (keptKeys.contains(p.instanceKey)) continue;
-      final id = await db.into(db.scheduledNotifications).insert(
+      final id = await db
+          .into(db.scheduledNotifications)
+          .insert(
             ScheduledNotificationsCompanion.insert(
               instanceKey: p.instanceKey,
               reminderId: p.reminderId,
@@ -155,9 +160,9 @@ class NotificationReconciler {
     // OS reboots that dropped alarms, or a crashed previous run).
     final pending = await gateway.pendingIds();
     if (pending != null) {
-      final ourIds = (await (db.select(db.scheduledNotifications)..where((n) => n.deliveredAt.isNull())).get())
-          .map((r) => r.id)
-          .toSet();
+      final ourIds = (await (db.select(
+        db.scheduledNotifications,
+      )..where((n) => n.deliveredAt.isNull())).get()).map((r) => r.id).toSet();
       for (final orphan in pending.difference(ourIds)) {
         await gateway.cancel(orphan);
         cancelled++;
@@ -170,18 +175,22 @@ class NotificationReconciler {
       }
     }
     return ReconcileResult(
-        scheduled: scheduled, cancelled: cancelled, rescheduled: rescheduled, pending: kept.length + scheduled);
+      scheduled: scheduled,
+      cancelled: cancelled,
+      rescheduled: rescheduled,
+      pending: kept.length + scheduled,
+    );
   }
 
   PlannedNotification _fromRow(ScheduledNotificationRow r) => PlannedNotification(
-        instanceKey: r.instanceKey,
-        reminderId: r.reminderId,
-        taskId: r.taskId,
-        occurrenceDate: r.occurrenceDate == null ? null : LocalDate.fromEpochDay(r.occurrenceDate!),
-        fireAt: DateTime.fromMillisecondsSinceEpoch(r.fireAt, isUtc: true).toLocal(),
-        title: r.title,
-        body: r.body,
-      );
+    instanceKey: r.instanceKey,
+    reminderId: r.reminderId,
+    taskId: r.taskId,
+    occurrenceDate: r.occurrenceDate == null ? null : LocalDate.fromEpochDay(r.occurrenceDate!),
+    fireAt: DateTime.fromMillisecondsSinceEpoch(r.fireAt, isUtc: true).toLocal(),
+    title: r.title,
+    body: r.body,
+  );
 
   /// Handles "Complete" from a notification.
   Future<void> completeFromNotification(int taskId, LocalDate? occurrenceDate) async {

@@ -28,8 +28,7 @@ class Projects extends Table {
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get parentId => integer().nullable().references(Tasks, #id, onDelete: KeyAction.cascade)();
-  IntColumn get projectId =>
-      integer().nullable().references(Projects, #id, onDelete: KeyAction.setNull)();
+  IntColumn get projectId => integer().nullable().references(Projects, #id, onDelete: KeyAction.setNull)();
   TextColumn get title => text()();
   TextColumn get description => text().withDefault(const Constant(''))();
   IntColumn get type => integer().withDefault(const Constant(0))();

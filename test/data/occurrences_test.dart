@@ -11,17 +11,17 @@ void main() {
   setUp(() => env = TestEnv(now: DateTime(2026, 10, 1, 9)));
   tearDown(() => env.dispose());
 
-  Future<List<String>> occ(int id) async => (await env.tasks.watchOccurrences(id).first)
-      .reversed
-      .map((o) => '${o.date}:${o.status.name}')
-      .toList();
+  Future<List<String>> occ(int id) async =>
+      (await env.tasks.watchOccurrences(id).first).reversed.map((o) => '${o.date}:${o.status.name}').toList();
 
-  Future<int> spanish() => env.tasks.createTask(TaskDraft(
-        title: 'Learn Spanish',
-        type: TaskType.recurring,
-        recurrence: RecurrenceRule.daily(LocalDate(2026, 10, 1), every: 2),
-        dueMinute: 19 * 60,
-      ));
+  Future<int> spanish() => env.tasks.createTask(
+    TaskDraft(
+      title: 'Learn Spanish',
+      type: TaskType.recurring,
+      recurrence: RecurrenceRule.daily(LocalDate(2026, 10, 1), every: 2),
+      dueMinute: 19 * 60,
+    ),
+  );
 
   test('recurring task stays one task and materialises a bounded window', () async {
     env.tasks.lookaheadDays = 6;
@@ -72,8 +72,11 @@ void main() {
     final all = await env.tasks.watchOccurrences(id, limit: 10000).first;
     final oldest = all.map((o) => o.date).reduce((a, b) => a < b ? a : b);
     expect(oldest >= LocalDate(2026, 10, 1), isTrue);
-    expect(all.where((o) => o.date > LocalDate(2026, 10, 11) && o.date < LocalDate(2027, 3, 1)), isEmpty,
-        reason: 'catch-up is limited to ~2 months');
+    expect(
+      all.where((o) => o.date > LocalDate(2026, 10, 11) && o.date < LocalDate(2027, 3, 1)),
+      isEmpty,
+      reason: 'catch-up is limited to ~2 months',
+    );
   });
 
   test('changing the rule keeps completed history and replaces future dates', () async {
@@ -138,11 +141,13 @@ void main() {
 
   test('monthly rent on the 25th always has its next occurrence', () async {
     env.tasks.lookaheadDays = 3;
-    final id = await env.tasks.createTask(TaskDraft(
-      title: 'Pay rent',
-      type: TaskType.recurring,
-      recurrence: RecurrenceRule.monthlyOnDay(LocalDate(2026, 10, 1), 25),
-    ));
+    final id = await env.tasks.createTask(
+      TaskDraft(
+        title: 'Pay rent',
+        type: TaskType.recurring,
+        recurrence: RecurrenceRule.monthlyOnDay(LocalDate(2026, 10, 1), 25),
+      ),
+    );
     expect(await occ(id), ['2026-10-25:notStarted']);
     expect((await env.tasks.getTask(id))!.dueDate, LocalDate(2026, 10, 25));
   });

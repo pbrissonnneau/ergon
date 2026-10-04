@@ -77,8 +77,7 @@ class LocalDate implements Comparable<LocalDate> {
   ///
   /// Uses the platform's local timezone. A wall time that does not exist
   /// (skipped by a DST transition) is normalised forward by the platform.
-  DateTime atMinute([int minuteOfDay = 0]) =>
-      DateTime(year, month, day, minuteOfDay ~/ 60, minuteOfDay % 60);
+  DateTime atMinute([int minuteOfDay = 0]) => DateTime(year, month, day, minuteOfDay ~/ 60, minuteOfDay % 60);
 
   static bool isLeapYear(int y) => (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
 

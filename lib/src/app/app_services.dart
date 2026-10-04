@@ -15,13 +15,9 @@ import '../services/reminder_host.dart';
 
 /// Composition root: owns every long-lived service of a process.
 class AppServices {
-  AppServices._({
-    required this.db,
-    required this.settings,
-    required this.platform,
-    required this.clock,
-  })  : tasks = TaskRepository(db, clock: clock),
-        projects = ProjectRepository(db, clock: clock) {
+  AppServices._({required this.db, required this.settings, required this.platform, required this.clock})
+    : tasks = TaskRepository(db, clock: clock),
+      projects = ProjectRepository(db, clock: clock) {
     agenda = AgendaService(tasks);
     tasks.lookaheadDays = settings.upcomingDays > 14 ? settings.upcomingDays : 14;
     reminders = ReminderHost(
@@ -123,8 +119,7 @@ class AppScope extends InheritedWidget {
   const AppScope({super.key, required this.services, required super.child});
   final AppServices services;
 
-  static AppServices of(BuildContext context) =>
-      context.getInheritedWidgetOfExactType<AppScope>()!.services;
+  static AppServices of(BuildContext context) => context.getInheritedWidgetOfExactType<AppScope>()!.services;
 
   @override
   bool updateShouldNotify(AppScope oldWidget) => services != oldWidget.services;

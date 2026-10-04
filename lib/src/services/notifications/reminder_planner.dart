@@ -101,18 +101,20 @@ class ReminderPlanner {
         for (final (fire, occDate) in instances) {
           if (!fire.isAfter(now)) continue;
           // Single instances are always kept; expanded series are windowed.
-          final windowed =
-              r.kind == ReminderKind.repeating || (r.kind == ReminderKind.relative && task.isRecurring);
+          final windowed = r.kind == ReminderKind.repeating || (r.kind == ReminderKind.relative && task.isRecurring);
           if (windowed && fire.isAfter(end)) continue;
-          out.add(PlannedNotification(
-            instanceKey: '${r.id}@${fire.toUtc().millisecondsSinceEpoch}${occDate == null ? '' : '@${occDate.epochDay}'}',
-            reminderId: r.id!,
-            taskId: task.id,
-            occurrenceDate: occDate,
-            fireAt: fire,
-            title: task.title,
-            body: _body(task, occDate),
-          ));
+          out.add(
+            PlannedNotification(
+              instanceKey:
+                  '${r.id}@${fire.toUtc().millisecondsSinceEpoch}${occDate == null ? '' : '@${occDate.epochDay}'}',
+              reminderId: r.id!,
+              taskId: task.id,
+              occurrenceDate: occDate,
+              fireAt: fire,
+              title: task.title,
+              body: _body(task, occDate),
+            ),
+          );
         }
       }
     }
@@ -136,8 +138,8 @@ class ReminderPlanner {
     final prio = task.priority == TaskPriority.urgent
         ? 'Urgent · '
         : task.priority == TaskPriority.high
-            ? 'High priority · '
-            : '';
+        ? 'High priority · '
+        : '';
     if (date == null) return '${prio}Reminder';
     final time = task.dueMinute == null ? '' : ' at ${MinuteOfDay.format(task.dueMinute!)}';
     return '${prio}Due $date$time';

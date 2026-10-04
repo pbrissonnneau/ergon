@@ -23,8 +23,7 @@ enum TaskStatus {
   /// Statuses that appear in the agenda. Suspended work is deliberately parked.
   bool get isAgendaVisible => isOpen && this != suspended;
 
-  static TaskStatus fromCode(int code) =>
-      values.firstWhere((s) => s.code == code, orElse: () => notStarted);
+  static TaskStatus fromCode(int code) => values.firstWhere((s) => s.code == code, orElse: () => notStarted);
 
   static const List<int> closedCodes = [2, 6];
   static const List<int> agendaCodes = [0, 1, 4, 5];
@@ -40,8 +39,7 @@ enum TaskPriority {
   final int code;
   final String label;
 
-  static TaskPriority fromCode(int code) =>
-      values.firstWhere((p) => p.code == code, orElse: () => normal);
+  static TaskPriority fromCode(int code) => values.firstWhere((p) => p.code == code, orElse: () => normal);
 }
 
 enum TaskType {
@@ -53,8 +51,7 @@ enum TaskType {
   final int code;
   final String label;
 
-  static TaskType fromCode(int code) =>
-      values.firstWhere((t) => t.code == code, orElse: () => oneTime);
+  static TaskType fromCode(int code) => values.firstWhere((t) => t.code == code, orElse: () => oneTime);
 }
 
 enum ReminderKind {
@@ -75,6 +72,5 @@ enum ReminderKind {
   final int code;
   final String label;
 
-  static ReminderKind fromCode(int code) =>
-      values.firstWhere((k) => k.code == code, orElse: () => once);
+  static ReminderKind fromCode(int code) => values.firstWhere((k) => k.code == code, orElse: () => once);
 }

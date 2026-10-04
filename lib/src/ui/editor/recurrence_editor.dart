@@ -6,8 +6,12 @@ import '../../domain/recurrence_engine.dart';
 import '../formatting.dart';
 
 /// Dialog to create/edit a [RecurrenceRule]. Returns null when cancelled.
-Future<RecurrenceRule?> showRecurrenceDialog(BuildContext context,
-    {RecurrenceRule? initial, required LocalDate today, String title = 'Repeat'}) {
+Future<RecurrenceRule?> showRecurrenceDialog(
+  BuildContext context, {
+  RecurrenceRule? initial,
+  required LocalDate today,
+  String title = 'Repeat',
+}) {
   return showDialog<RecurrenceRule>(
     context: context,
     builder: (_) => _RecurrenceDialog(initial: initial ?? RecurrenceRule.daily(today), today: today, title: title),
@@ -33,13 +37,15 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
   late MonthlyMode monthlyMode = widget.initial.monthlyMode;
   late int monthDay = widget.initial.monthDay ?? widget.initial.start.day;
   late int ordinal = widget.initial.weekOrdinal ?? ((widget.initial.start.day - 1) ~/ 7 + 1);
-  late int ordinalWeekday = widget.initial.weekdays.isNotEmpty ? widget.initial.weekdays.first : widget.initial.start.weekday;
+  late int ordinalWeekday = widget.initial.weekdays.isNotEmpty
+      ? widget.initial.weekdays.first
+      : widget.initial.start.weekday;
   late LocalDate start = widget.initial.start;
   late _End end = widget.initial.until != null
       ? _End.until
       : widget.initial.count != null
-          ? _End.count
-          : _End.never;
+      ? _End.count
+      : _End.never;
   late LocalDate until = widget.initial.until ?? widget.today.addMonths(3);
   late int count = widget.initial.count ?? 10;
   late final _intervalCtrl = TextEditingController(text: '$interval');
@@ -75,15 +81,19 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
   }
 
   String get unit => switch (freq) {
-        RecurrenceFrequency.daily => interval == 1 ? 'day' : 'days',
-        RecurrenceFrequency.weekly => interval == 1 ? 'week' : 'weeks',
-        RecurrenceFrequency.monthly => interval == 1 ? 'month' : 'months',
-        RecurrenceFrequency.yearly => interval == 1 ? 'year' : 'years',
-      };
+    RecurrenceFrequency.daily => interval == 1 ? 'day' : 'days',
+    RecurrenceFrequency.weekly => interval == 1 ? 'week' : 'weeks',
+    RecurrenceFrequency.monthly => interval == 1 ? 'month' : 'months',
+    RecurrenceFrequency.yearly => interval == 1 ? 'year' : 'years',
+  };
 
   Future<LocalDate?> _pick(LocalDate initial) async {
     final d = await showDatePicker(
-        context: context, initialDate: initial.atMinute(), firstDate: DateTime(2000), lastDate: DateTime(2100));
+      context: context,
+      initialDate: initial.atMinute(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
     return d == null ? null : LocalDate.fromDateTime(d);
   }
 
@@ -114,87 +124,102 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
                 onSelectionChanged: (s) => setState(() => freq = s.first),
               ),
               const SizedBox(height: 16),
-              Row(children: [
-                const Text('Every'),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 64,
-                  child: TextField(
-                    controller: _intervalCtrl,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    onChanged: (v) => setState(() => interval = (int.tryParse(v) ?? 1).clamp(1, 999)),
+              Row(
+                children: [
+                  const Text('Every'),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 64,
+                    child: TextField(
+                      controller: _intervalCtrl,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      onChanged: (v) => setState(() => interval = (int.tryParse(v) ?? 1).clamp(1, 999)),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Text(unit),
-              ]),
+                  const SizedBox(width: 12),
+                  Text(unit),
+                ],
+              ),
               if (freq == RecurrenceFrequency.weekly) ...[
                 const SizedBox(height: 16),
-                Wrap(spacing: 4, runSpacing: 4, children: [
-                  for (var d = 1; d <= 7; d++)
-                    FilterChip(
-                      label: Text(weekdayShortNames[d - 1]),
-                      selected: weekdays.contains(d) || (weekdays.isEmpty && d == start.weekday),
-                      showCheckmark: false,
-                      onSelected: (on) => setState(() {
-                        if (weekdays.isEmpty) weekdays = {start.weekday};
-                        on ? weekdays.add(d) : weekdays.remove(d);
-                      }),
-                    ),
-                ]),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    for (var d = 1; d <= 7; d++)
+                      FilterChip(
+                        label: Text(weekdayShortNames[d - 1]),
+                        selected: weekdays.contains(d) || (weekdays.isEmpty && d == start.weekday),
+                        showCheckmark: false,
+                        onSelected: (on) => setState(() {
+                          if (weekdays.isEmpty) weekdays = {start.weekday};
+                          on ? weekdays.add(d) : weekdays.remove(d);
+                        }),
+                      ),
+                  ],
+                ),
               ],
               if (freq == RecurrenceFrequency.monthly) ...[
                 const SizedBox(height: 12),
                 RadioGroup<MonthlyMode>(
                   groupValue: monthlyMode,
                   onChanged: (v) => setState(() => monthlyMode = v!),
-                  child: Column(children: [
-                    Row(children: [
-                      const Radio(value: MonthlyMode.dayOfMonth),
-                      const Text('On day'),
-                      const SizedBox(width: 12),
-                      DropdownButton<int>(
-                        value: monthDay,
-                        items: [
-                          for (var i = 1; i <= 31; i++) DropdownMenuItem(value: i, child: Text('$i')),
-                          const DropdownMenuItem(value: -1, child: Text('Last day')),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Radio(value: MonthlyMode.dayOfMonth),
+                          const Text('On day'),
+                          const SizedBox(width: 12),
+                          DropdownButton<int>(
+                            value: monthDay,
+                            items: [
+                              for (var i = 1; i <= 31; i++) DropdownMenuItem(value: i, child: Text('$i')),
+                              const DropdownMenuItem(value: -1, child: Text('Last day')),
+                            ],
+                            onChanged: (v) => setState(() {
+                              monthDay = v!;
+                              monthlyMode = MonthlyMode.dayOfMonth;
+                            }),
+                          ),
                         ],
-                        onChanged: (v) => setState(() {
-                          monthDay = v!;
-                          monthlyMode = MonthlyMode.dayOfMonth;
-                        }),
                       ),
-                    ]),
-                    Row(children: [
-                      const Radio(value: MonthlyMode.nthWeekday),
-                      const Text('On the'),
-                      const SizedBox(width: 12),
-                      DropdownButton<int>(
-                        value: ordinal,
-                        items: [for (final (v, l) in ordinals) DropdownMenuItem(value: v, child: Text(l))],
-                        onChanged: (v) => setState(() {
-                          ordinal = v!;
-                          monthlyMode = MonthlyMode.nthWeekday;
-                        }),
-                      ),
-                      const SizedBox(width: 8),
-                      DropdownButton<int>(
-                        value: ordinalWeekday,
-                        items: [
-                          for (var d = 1; d <= 7; d++) DropdownMenuItem(value: d, child: Text(weekdayShortNames[d - 1]))
+                      Row(
+                        children: [
+                          const Radio(value: MonthlyMode.nthWeekday),
+                          const Text('On the'),
+                          const SizedBox(width: 12),
+                          DropdownButton<int>(
+                            value: ordinal,
+                            items: [for (final (v, l) in ordinals) DropdownMenuItem(value: v, child: Text(l))],
+                            onChanged: (v) => setState(() {
+                              ordinal = v!;
+                              monthlyMode = MonthlyMode.nthWeekday;
+                            }),
+                          ),
+                          const SizedBox(width: 8),
+                          DropdownButton<int>(
+                            value: ordinalWeekday,
+                            items: [
+                              for (var d = 1; d <= 7; d++)
+                                DropdownMenuItem(value: d, child: Text(weekdayShortNames[d - 1])),
+                            ],
+                            onChanged: (v) => setState(() {
+                              ordinalWeekday = v!;
+                              monthlyMode = MonthlyMode.nthWeekday;
+                            }),
+                          ),
                         ],
-                        onChanged: (v) => setState(() {
-                          ordinalWeekday = v!;
-                          monthlyMode = MonthlyMode.nthWeekday;
-                        }),
                       ),
-                    ]),
-                  ]),
+                    ],
+                  ),
                 ),
                 if (monthlyMode == MonthlyMode.dayOfMonth && monthDay > 28)
-                  Text('In shorter months the last day is used.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.outline)),
+                  Text(
+                    'In shorter months the last day is used.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.outline),
+                  ),
               ],
               const SizedBox(height: 12),
               ListTile(
@@ -209,21 +234,23 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
                   child: Text(Fmt.date(start, widget.today)),
                 ),
               ),
-              Row(children: [
-                const Icon(Icons.stop_outlined),
-                const SizedBox(width: 16),
-                const Text('Ends'),
-                const Spacer(),
-                DropdownButton<_End>(
-                  value: end,
-                  items: const [
-                    DropdownMenuItem(value: _End.never, child: Text('Never')),
-                    DropdownMenuItem(value: _End.until, child: Text('On date')),
-                    DropdownMenuItem(value: _End.count, child: Text('After N times')),
-                  ],
-                  onChanged: (v) => setState(() => end = v!),
-                ),
-              ]),
+              Row(
+                children: [
+                  const Icon(Icons.stop_outlined),
+                  const SizedBox(width: 16),
+                  const Text('Ends'),
+                  const Spacer(),
+                  DropdownButton<_End>(
+                    value: end,
+                    items: const [
+                      DropdownMenuItem(value: _End.never, child: Text('Never')),
+                      DropdownMenuItem(value: _End.until, child: Text('On date')),
+                      DropdownMenuItem(value: _End.count, child: Text('After N times')),
+                    ],
+                    onChanged: (v) => setState(() => end = v!),
+                  ),
+                ],
+              ),
               if (end == _End.until)
                 Align(
                   alignment: Alignment.centerRight,

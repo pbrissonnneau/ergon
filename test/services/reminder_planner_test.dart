@@ -12,18 +12,17 @@ Task task({
   TaskStatus status = TaskStatus.notStarted,
   TaskType type = TaskType.oneTime,
   RecurrenceRule? rule,
-}) =>
-    Task(
-      id: id,
-      title: 'T$id',
-      dueDate: due,
-      dueMinute: minute,
-      status: status,
-      type: type,
-      recurrence: rule,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-    );
+}) => Task(
+  id: id,
+  title: 'T$id',
+  dueDate: due,
+  dueMinute: minute,
+  status: status,
+  type: type,
+  recurrence: rule,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
 
 Reminder rem(int id, Reminder r) => r.copyWith(id: id);
 
@@ -64,11 +63,7 @@ void main() {
       rem(2, const Reminder.relative(24 * 60)),
       rem(3, Reminder.once(LocalDate(2026, 10, 5), 8 * 60)),
     ]);
-    expect(p.map((e) => e.fireAt), [
-      DateTime(2026, 10, 5, 8),
-      DateTime(2026, 10, 19, 18),
-      DateTime(2026, 10, 20, 18),
-    ]);
+    expect(p.map((e) => e.fireAt), [DateTime(2026, 10, 5, 8), DateTime(2026, 10, 19, 18), DateTime(2026, 10, 20, 18)]);
     expect(p.map((e) => e.instanceKey).toSet(), hasLength(3));
   });
 
@@ -81,8 +76,13 @@ void main() {
 
   test('relative reminders on recurring tasks follow each open occurrence', () {
     final t = task(type: TaskType.recurring, rule: RecurrenceRule.daily(today, every: 2), minute: 19 * 60);
-    final p = plan(t, [rem(1, const Reminder.relative(30))],
-        closed: {1: {LocalDate(2026, 10, 6).epochDay}});
+    final p = plan(
+      t,
+      [rem(1, const Reminder.relative(30))],
+      closed: {
+        1: {LocalDate(2026, 10, 6).epochDay},
+      },
+    );
     expect(p.first.fireAt, DateTime(2026, 10, 4, 18, 30));
     expect(p.first.occurrenceDate, today);
     expect(p.any((e) => e.occurrenceDate == LocalDate(2026, 10, 6)), isFalse, reason: 'already completed');
@@ -117,9 +117,12 @@ void main() {
     // Europe: DST ends 2026-10-25 03:00 -> 02:00; US: 2026-11-01.
     test('wall-clock reminders keep their local hour across a DST change', () {
       final start = DateTime(2026, 10, 20, 10);
-      final p = planner.plan(now: start, tasks: [
-        (task(), [rem(1, Reminder.repeating(RecurrenceRule.daily(LocalDate(2026, 10, 20)), 19 * 60))]),
-      ]);
+      final p = planner.plan(
+        now: start,
+        tasks: [
+          (task(), [rem(1, Reminder.repeating(RecurrenceRule.daily(LocalDate(2026, 10, 20)), 19 * 60))]),
+        ],
+      );
       expect(p.every((e) => e.fireAt.hour == 19 && e.fireAt.minute == 0), isTrue);
       final days = p.map((e) => LocalDate.fromDateTime(e.fireAt)).toList();
       for (var i = 1; i < days.length; i++) {
@@ -128,17 +131,23 @@ void main() {
     });
 
     test('whole-day offsets are calendar-based, not 24h multiples', () {
-      final p2 = planner.plan(now: DateTime(2026, 10, 20, 10), tasks: [
-        (task(due: LocalDate(2026, 11, 2), minute: 9 * 60), [rem(1, const Reminder.relative(7 * 24 * 60))]),
-      ]);
+      final p2 = planner.plan(
+        now: DateTime(2026, 10, 20, 10),
+        tasks: [
+          (task(due: LocalDate(2026, 11, 2), minute: 9 * 60), [rem(1, const Reminder.relative(7 * 24 * 60))]),
+        ],
+      );
       expect(p2.single.fireAt.hour, 9);
       expect(LocalDate.fromDateTime(p2.single.fireAt), LocalDate(2026, 10, 26));
     });
 
     test('sub-day offsets are exact durations', () {
-      final p = planner.plan(now: DateTime(2026, 10, 20, 10), tasks: [
-        (task(due: LocalDate(2026, 10, 25), minute: 4 * 60), [rem(1, const Reminder.relative(180))]),
-      ]);
+      final p = planner.plan(
+        now: DateTime(2026, 10, 20, 10),
+        tasks: [
+          (task(due: LocalDate(2026, 10, 25), minute: 4 * 60), [rem(1, const Reminder.relative(180))]),
+        ],
+      );
       final due = LocalDate(2026, 10, 25).atMinute(4 * 60);
       expect(due.difference(p.single.fireAt), const Duration(hours: 3));
     });

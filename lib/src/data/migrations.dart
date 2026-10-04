@@ -11,22 +11,24 @@ abstract final class Migrations {
   static const currentVersion = 1;
 
   static MigrationStrategy strategy(AppDatabase db) => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-          await createSearchIndex(db);
-        },
-        onUpgrade: (m, from, to) async {
-          // Example for the next version:
-          // if (from < 2) { await m.addColumn(db.tasks, db.tasks.someNewColumn); }
-        },
-        beforeOpen: (details) async {
-          await db.customStatement('PRAGMA foreign_keys = ON');
-          if (details.hadUpgrade) {
-            // Rebuild the derived search index after any schema change.
-            await db.customStatement("INSERT INTO task_search(task_search) VALUES('rebuild')");
-          }
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+      await createSearchIndex(db);
+    },
+    onUpgrade: (m, from, to) async {
+      // Example for the next version:
+      // if (from < 2) { await m.addColumn(db.tasks, db.tasks.someNewColumn); }
+    },
+    beforeOpen: (details) async {
+      await db.customStatement('PRAGMA foreign_keys = ON');
+      // Rebuild the derived search index after any schema change.
+      if (details.hadUpgrade) await rebuildSearchIndex(db);
+    },
+  );
+
+  /// Recomputes the full-text index from the `tasks` table.
+  static Future<void> rebuildSearchIndex(AppDatabase db) =>
+      db.customStatement("INSERT INTO task_search(task_search) VALUES('rebuild')");
 
   /// FTS5 full-text index over task title/description, kept in sync by
   /// triggers (external-content table, so no data duplication).

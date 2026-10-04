@@ -90,20 +90,19 @@ class TaskQuery {
     bool? includeSubtasks,
     TaskSort? sort,
     int? limit,
-  }) =>
-      TaskQuery(
-        text: text ?? this.text,
-        projectIds: projectIds ?? this.projectIds,
-        withoutProject: withoutProject ?? this.withoutProject,
-        statuses: statuses ?? this.statuses,
-        priorities: priorities ?? this.priorities,
-        types: types ?? this.types,
-        due: due ?? this.due,
-        completion: completion ?? this.completion,
-        includeSubtasks: includeSubtasks ?? this.includeSubtasks,
-        sort: sort ?? this.sort,
-        limit: limit ?? this.limit,
-      );
+  }) => TaskQuery(
+    text: text ?? this.text,
+    projectIds: projectIds ?? this.projectIds,
+    withoutProject: withoutProject ?? this.withoutProject,
+    statuses: statuses ?? this.statuses,
+    priorities: priorities ?? this.priorities,
+    types: types ?? this.types,
+    due: due ?? this.due,
+    completion: completion ?? this.completion,
+    includeSubtasks: includeSubtasks ?? this.includeSubtasks,
+    sort: sort ?? this.sort,
+    limit: limit ?? this.limit,
+  );
 
   /// Builds an FTS5 MATCH expression: every token must prefix-match.
   static String? ftsExpression(String text) {
@@ -118,10 +117,10 @@ class TaskQuery {
 
   /// Inclusive epoch-day bounds for [due] relative to [today].
   (int?, int?) dueBounds(LocalDate today) => switch (due) {
-        DueFilter.overdue => (null, today.epochDay - 1),
-        DueFilter.today => (today.epochDay, today.epochDay),
-        DueFilter.next7Days => (today.epochDay, today.epochDay + 7),
-        DueFilter.next30Days => (today.epochDay, today.epochDay + 30),
-        _ => (null, null),
-      };
+    DueFilter.overdue => (null, today.epochDay - 1),
+    DueFilter.today => (today.epochDay, today.epochDay),
+    DueFilter.next7Days => (today.epochDay, today.epochDay + 7),
+    DueFilter.next30Days => (today.epochDay, today.epochDay + 30),
+    _ => (null, null),
+  };
 }

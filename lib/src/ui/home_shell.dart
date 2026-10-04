@@ -70,38 +70,36 @@ class HomeShellState extends State<HomeShell> {
     final wide = MediaQuery.sizeOf(context).width >= 760;
     final body = IndexedStack(index: _index, children: [for (var i = 0; i < 4; i++) _tab(i)]);
     final fab = _index < 3
-        ? FloatingActionButton(
-            tooltip: 'New task (Ctrl+N)',
-            onPressed: quickAdd,
-            child: const Icon(Icons.add),
-          )
+        ? FloatingActionButton(tooltip: 'New task (Ctrl+N)', onPressed: quickAdd, child: const Icon(Icons.add))
         : null;
 
     final scaffold = wide
         ? Scaffold(
-            body: Row(children: [
-              NavigationRail(
-                selectedIndex: _index,
-                onDestinationSelected: select,
-                labelType: NavigationRailLabelType.all,
-                leading: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: FloatingActionButton.small(
-                    heroTag: 'rail-add',
-                    tooltip: 'New task (Ctrl+N)',
-                    elevation: 0,
-                    onPressed: quickAdd,
-                    child: const Icon(Icons.add),
+            body: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _index,
+                  onDestinationSelected: select,
+                  labelType: NavigationRailLabelType.all,
+                  leading: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: FloatingActionButton.small(
+                      heroTag: 'rail-add',
+                      tooltip: 'New task (Ctrl+N)',
+                      elevation: 0,
+                      onPressed: quickAdd,
+                      child: const Icon(Icons.add),
+                    ),
                   ),
+                  destinations: [
+                    for (final (icon, selected, label) in _destinations)
+                      NavigationRailDestination(icon: Icon(icon), selectedIcon: Icon(selected), label: Text(label)),
+                  ],
                 ),
-                destinations: [
-                  for (final (icon, selected, label) in _destinations)
-                    NavigationRailDestination(icon: Icon(icon), selectedIcon: Icon(selected), label: Text(label)),
-                ],
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(child: body),
-            ]),
+                const VerticalDivider(width: 1),
+                Expanded(child: body),
+              ],
+            ),
           )
         : Scaffold(
             body: body,

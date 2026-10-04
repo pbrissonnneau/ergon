@@ -86,14 +86,20 @@ List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overd
   final today = a.todaySections.toList();
   rows.add(AgendaHeaderRow('Today', count: a.todayCount, big: true));
   for (final s in today) {
-    rows.add(AgendaHeaderRow(s.kind.label,
+    rows.add(
+      AgendaHeaderRow(
+        s.kind.label,
         count: s.entries.length,
-        color: s.kind == AgendaSectionKind.todayUrgent ? const Color(0xFFE03131) : null));
+        color: s.kind == AgendaSectionKind.todayUrgent ? const Color(0xFFE03131) : null,
+      ),
+    );
     rows.addAll(s.entries.map(AgendaEntryRow.new));
   }
   final overdue = a.overdue;
   if (overdue != null) {
-    rows.add(AgendaHeaderRow('Overdue', count: overdue.entries.length, big: true, color: scheme.error, collapsible: true));
+    rows.add(
+      AgendaHeaderRow('Overdue', count: overdue.entries.length, big: true, color: scheme.error, collapsible: true),
+    );
     if (!overdueCollapsed) rows.addAll(overdue.entries.map(AgendaEntryRow.new));
   }
   final upcoming = a.upcoming.toList();
@@ -101,9 +107,12 @@ List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overd
     rows.add(AgendaHeaderRow('Upcoming', count: upcoming.fold<int>(0, (n, s) => n + s.entries.length), big: true));
     for (final s in upcoming) {
       final d = s.date!;
-      rows.add(AgendaHeaderRow(
+      rows.add(
+        AgendaHeaderRow(
           a.today.daysUntil(d) == 1 ? 'Tomorrow · ${Fmt.longDate(d)}' : Fmt.longDate(d),
-          count: s.entries.length));
+          count: s.entries.length,
+        ),
+      );
       rows.addAll(s.entries.map(AgendaEntryRow.new));
     }
   }
@@ -116,10 +125,6 @@ class AgendaEntryTile extends StatelessWidget {
   final LocalDate today;
 
   @override
-  Widget build(BuildContext context) => ExpandableTaskTile(
-        item: entry.item,
-        occurrence: entry.occurrence,
-        today: today,
-        missedCount: entry.missedCount,
-      );
+  Widget build(BuildContext context) =>
+      ExpandableTaskTile(item: entry.item, occurrence: entry.occurrence, today: today, missedCount: entry.missedCount);
 }

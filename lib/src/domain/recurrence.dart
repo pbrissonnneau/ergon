@@ -50,11 +50,10 @@ class RecurrenceRule {
       RecurrenceRule(frequency: RecurrenceFrequency.daily, start: start, interval: every);
 
   factory RecurrenceRule.weekly(LocalDate start, {int every = 1, Set<int>? weekdays}) =>
-      RecurrenceRule(
-          frequency: RecurrenceFrequency.weekly, start: start, interval: every, weekdays: weekdays);
+      RecurrenceRule(frequency: RecurrenceFrequency.weekly, start: start, interval: every, weekdays: weekdays);
 
-  factory RecurrenceRule.monthlyOnDay(LocalDate start, int day, {int every = 1}) => RecurrenceRule(
-      frequency: RecurrenceFrequency.monthly, start: start, interval: every, monthDay: day);
+  factory RecurrenceRule.monthlyOnDay(LocalDate start, int day, {int every = 1}) =>
+      RecurrenceRule(frequency: RecurrenceFrequency.monthly, start: start, interval: every, monthDay: day);
 
   final RecurrenceFrequency frequency;
   final int interval;
@@ -89,44 +88,43 @@ class RecurrenceRule {
     int? Function()? weekOrdinal,
     LocalDate? Function()? until,
     int? Function()? count,
-  }) =>
-      RecurrenceRule(
-        frequency: frequency ?? this.frequency,
-        start: start ?? this.start,
-        interval: interval ?? this.interval,
-        weekdays: weekdays ?? this.weekdays,
-        monthlyMode: monthlyMode ?? this.monthlyMode,
-        monthDay: monthDay != null ? monthDay() : this.monthDay,
-        weekOrdinal: weekOrdinal != null ? weekOrdinal() : this.weekOrdinal,
-        until: until != null ? until() : this.until,
-        count: count != null ? count() : this.count,
-      );
+  }) => RecurrenceRule(
+    frequency: frequency ?? this.frequency,
+    start: start ?? this.start,
+    interval: interval ?? this.interval,
+    weekdays: weekdays ?? this.weekdays,
+    monthlyMode: monthlyMode ?? this.monthlyMode,
+    monthDay: monthDay != null ? monthDay() : this.monthDay,
+    weekOrdinal: weekOrdinal != null ? weekOrdinal() : this.weekOrdinal,
+    until: until != null ? until() : this.until,
+    count: count != null ? count() : this.count,
+  );
 
   Map<String, Object?> toJson() => {
-        'f': frequency.name,
-        'i': interval,
-        's': start.toString(),
-        if (weekdays.isNotEmpty) 'wd': (weekdays.toList()..sort()),
-        if (monthlyMode != MonthlyMode.dayOfMonth) 'mm': monthlyMode.name,
-        if (monthDay != null) 'md': monthDay,
-        if (weekOrdinal != null) 'wo': weekOrdinal,
-        if (until != null) 'u': until.toString(),
-        if (count != null) 'c': count,
-      };
+    'f': frequency.name,
+    'i': interval,
+    's': start.toString(),
+    if (weekdays.isNotEmpty) 'wd': (weekdays.toList()..sort()),
+    if (monthlyMode != MonthlyMode.dayOfMonth) 'mm': monthlyMode.name,
+    if (monthDay != null) 'md': monthDay,
+    if (weekOrdinal != null) 'wo': weekOrdinal,
+    if (until != null) 'u': until.toString(),
+    if (count != null) 'c': count,
+  };
 
   String encode() => jsonEncode(toJson());
 
   factory RecurrenceRule.fromJson(Map<String, Object?> j) => RecurrenceRule(
-        frequency: RecurrenceFrequency.values.byName(j['f']! as String),
-        interval: (j['i'] as int?) ?? 1,
-        start: LocalDate.parse(j['s']! as String),
-        weekdays: ((j['wd'] as List?) ?? const []).cast<int>().toSet(),
-        monthlyMode: j['mm'] == null ? MonthlyMode.dayOfMonth : MonthlyMode.values.byName(j['mm']! as String),
-        monthDay: j['md'] as int?,
-        weekOrdinal: j['wo'] as int?,
-        until: j['u'] == null ? null : LocalDate.parse(j['u']! as String),
-        count: j['c'] as int?,
-      );
+    frequency: RecurrenceFrequency.values.byName(j['f']! as String),
+    interval: (j['i'] as int?) ?? 1,
+    start: LocalDate.parse(j['s']! as String),
+    weekdays: ((j['wd'] as List?) ?? const []).cast<int>().toSet(),
+    monthlyMode: j['mm'] == null ? MonthlyMode.dayOfMonth : MonthlyMode.values.byName(j['mm']! as String),
+    monthDay: j['md'] as int?,
+    weekOrdinal: j['wo'] as int?,
+    until: j['u'] == null ? null : LocalDate.parse(j['u']! as String),
+    count: j['c'] as int?,
+  );
 
   static RecurrenceRule? decode(String? s) =>
       s == null || s.isEmpty ? null : RecurrenceRule.fromJson(jsonDecode(s) as Map<String, Object?>);
@@ -143,8 +141,7 @@ class RecurrenceRule {
       count == o.count;
 
   @override
-  bool operator ==(Object other) =>
-      other is RecurrenceRule && samePatternAs(other) && start == other.start;
+  bool operator ==(Object other) => other is RecurrenceRule && samePatternAs(other) && start == other.start;
 
   @override
   int get hashCode => Object.hash(frequency, interval, start, monthDay, weekOrdinal, until, count);
@@ -182,11 +179,22 @@ class RecurrenceRule {
 
   static String _ordinal(int n) {
     if (n % 100 >= 11 && n % 100 <= 13) return '${n}th';
-    return switch (n % 10) { 1 => '${n}st', 2 => '${n}nd', 3 => '${n}rd', _ => '${n}th' };
+    return switch (n % 10) {
+      1 => '${n}st',
+      2 => '${n}nd',
+      3 => '${n}rd',
+      _ => '${n}th',
+    };
   }
 
-  static String _ordinalWord(int n) =>
-      switch (n) { 1 => 'first', 2 => 'second', 3 => 'third', 4 => 'fourth', 5 => 'fifth', _ => 'last' };
+  static String _ordinalWord(int n) => switch (n) {
+    1 => 'first',
+    2 => 'second',
+    3 => 'third',
+    4 => 'fourth',
+    5 => 'fifth',
+    _ => 'last',
+  };
 
   static bool _setEq(Set<int> a, Set<int> b) => a.length == b.length && a.containsAll(b);
 }

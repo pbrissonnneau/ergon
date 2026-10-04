@@ -2,6 +2,8 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <algorithm>
+
 #include "flutter_window.h"
 #include "utils.h"
 
@@ -21,14 +23,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
+  // `ergon --overlay` runs the compact desktop overlay instead of the main
+  // window (same executable, separate process).
+  const bool overlay =
+      std::find(command_line_arguments.begin(), command_line_arguments.end(),
+                "--overlay") != command_line_arguments.end();
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
-  if (!window.Create(L"ergon", origin, size)) {
+  Win32Window::Size size = overlay ? Win32Window::Size(320, 420)
+                                   : Win32Window::Size(1100, 760);
+  if (!window.Create(overlay ? L"Ergon overlay" : L"Ergon", origin, size)) {
     return EXIT_FAILURE;
+  }
+  if (overlay) {
+    // Native tool window: no taskbar button, not listed in Alt+Tab, and
+    // topmost by default (the Dart side toggles topmost and removes the
+    // frame through window_manager, and restores the saved position/size).
+    HWND hwnd = window.GetHandle();
+    LONG_PTR ex_style = ::GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+    ::SetWindowLongPtr(hwnd, GWL_EXSTYLE,
+                       (ex_style | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
+    ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   }
   window.SetQuitOnClose(true);
 

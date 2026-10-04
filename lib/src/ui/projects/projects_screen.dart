@@ -4,6 +4,7 @@ import '../../app/app_services.dart';
 import '../../data/project_repository.dart';
 import '../../domain/models.dart';
 import '../tasks/tasks_screen.dart';
+import '../widgets/live_query.dart';
 
 class ProjectsScreen extends StatelessWidget {
   const ProjectsScreen({super.key});
@@ -22,20 +23,23 @@ class ProjectsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<List<ProjectWithCount>>(
-        stream: s.projects.watchWithCounts(),
-        builder: (context, snap) {
-          final list = snap.data;
+      body: LiveQuery<List<ProjectWithCount>>(
+        id: 'projects',
+        stream: s.projects.watchWithCounts,
+        builder: (context, list) {
           if (list == null) return const SizedBox.shrink();
           if (list.isEmpty) {
             return Center(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.folder_open, size: 48),
-                const SizedBox(height: 8),
-                const Text('No projects yet'),
-                const SizedBox(height: 12),
-                FilledButton.tonal(onPressed: () => editProject(context), child: const Text('Create a project')),
-              ]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.folder_open, size: 48),
+                  const SizedBox(height: 8),
+                  const Text('No projects yet'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonal(onPressed: () => editProject(context), child: const Text('Create a project')),
+                ],
+              ),
             );
           }
           return Align(
@@ -48,9 +52,8 @@ class ProjectsScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.inbox_outlined),
                     title: const Text('Tasks without project'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                      builder: (_) => const _NoProjectTasks(),
-                    )),
+                    onTap: () =>
+                        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _NoProjectTasks())),
                   ),
                   const Divider(),
                   for (final pc in list)
@@ -58,9 +61,9 @@ class ProjectsScreen extends StatelessWidget {
                       leading: CircleAvatar(radius: 8, backgroundColor: Color(pc.project.color)),
                       title: Text(pc.project.name),
                       subtitle: Text(pc.openCount == 0 ? 'No open tasks' : '${pc.openCount} open'),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                        builder: (_) => TasksScreen(project: pc.project),
-                      )),
+                      onTap: () =>
+                          Navigator.of(context)
+                              .push(MaterialPageRoute<void>(builder: (_) => TasksScreen(project: pc.project))),
                       trailing: PopupMenuButton<String>(
                         onSelected: (v) async {
                           if (v == 'edit') await editProject(context, project: pc.project);
@@ -90,27 +93,34 @@ class ProjectsScreen extends StatelessWidget {
       builder: (c) => StatefulBuilder(
         builder: (c, set) => AlertDialog(
           title: Text(project == null ? 'New project' : 'Edit project'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Name'),
-              onSubmitted: (_) => Navigator.pop(c, true),
-            ),
-            const SizedBox(height: 16),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final col in ProjectRepository.palette)
-                InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => set(() => color = col),
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Color(col),
-                    child: col == color ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
-                  ),
-                ),
-            ]),
-          ]),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Name'),
+                onSubmitted: (_) => Navigator.pop(c, true),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final col in ProjectRepository.palette)
+                    InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => set(() => color = col),
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Color(col),
+                        child: col == color ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
             FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Save')),

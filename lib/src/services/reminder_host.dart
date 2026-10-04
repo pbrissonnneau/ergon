@@ -112,8 +112,11 @@ class ReminderHost {
       await r.snooze(taskId, occurrenceDate: occurrenceDate, duration: duration);
     } else {
       // Another process delivers reminders; it will pick the snooze up.
-      await tasks.snooze(taskId, clock.now().add(duration ?? Duration(minutes: settings.snoozeMinutes)),
-          occurrenceDate: occurrenceDate);
+      await tasks.snooze(
+        taskId,
+        clock.now().add(duration ?? Duration(minutes: settings.snoozeMinutes)),
+        occurrenceDate: occurrenceDate,
+      );
     }
   }
 

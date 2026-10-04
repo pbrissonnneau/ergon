@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "app.ergon" "\0"
-            VALUE "FileDescription", "ergon" "\0"
+            VALUE "CompanyName", "Ergon" "\0"
+            VALUE "FileDescription", "Ergon - offline task manager" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "ergon" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 app.ergon. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Ergon. All rights reserved." "\0"
             VALUE "OriginalFilename", "ergon.exe" "\0"
-            VALUE "ProductName", "ergon" "\0"
+            VALUE "ProductName", "Ergon" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

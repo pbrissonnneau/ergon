@@ -59,8 +59,12 @@ class OverlayBounds {
   static Future<Rect?> load(Directory dir) async {
     try {
       final j = jsonDecode(await _file(dir).readAsString()) as Map<String, Object?>;
-      return Rect.fromLTWH((j['x']! as num).toDouble(), (j['y']! as num).toDouble(), (j['w']! as num).toDouble(),
-          (j['h']! as num).toDouble());
+      return Rect.fromLTWH(
+        (j['x']! as num).toDouble(),
+        (j['y']! as num).toDouble(),
+        (j['w']! as num).toDouble(),
+        (j['h']! as num).toDouble(),
+      );
     } catch (_) {
       return null;
     }
@@ -74,7 +78,7 @@ class OverlayBounds {
 /// forwarded to the main window (launching it if needed).
 class OverlayIntegration extends DesktopIntegration {
   OverlayIntegration({required super.dataDir, required this.overlayChannel})
-      : super(osSchedulesNotifications: Platform.isWindows);
+    : super(osSchedulesNotifications: Platform.isWindows);
 
   final InstanceChannel overlayChannel;
   StreamSubscription<IpcCommand>? _cmds;
@@ -198,27 +202,30 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
         home: DragToResizeArea(
           resizeEdgeSize: 6,
           child: Scaffold(
-            body: Column(children: [
-              _OverlayHeader(
-                onTop: _onTop,
-                onToggleTop: () => s.settings.overlayAlwaysOnTop = !_onTop,
-                onOpenMain: platform.showMain,
-                onAdd: platform.quickAddInMain,
-                onClose: () async {
-                  if (_closeOnDisable) s.settings.overlayEnabled = false;
-                  await Future<void>.delayed(const Duration(milliseconds: 50));
-                  await windowManager.close();
-                },
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: AgendaBuilderWidget(
-                  upcomingDaysOverride: s.settings.overlayShowUpcoming ? s.settings.upcomingDays.clamp(1, 7) : 0,
-                  builder: (context, agenda) =>
-                      agenda == null ? const SizedBox.shrink() : _OverlayList(agenda: agenda, onOpen: platform.openInMain),
+            body: Column(
+              children: [
+                _OverlayHeader(
+                  onTop: _onTop,
+                  onToggleTop: () => s.settings.overlayAlwaysOnTop = !_onTop,
+                  onOpenMain: platform.showMain,
+                  onAdd: platform.quickAddInMain,
+                  onClose: () async {
+                    if (_closeOnDisable) s.settings.overlayEnabled = false;
+                    await Future<void>.delayed(const Duration(milliseconds: 50));
+                    await windowManager.close();
+                  },
                 ),
-              ),
-            ]),
+                const Divider(height: 1),
+                Expanded(
+                  child: AgendaBuilderWidget(
+                    upcomingDaysOverride: s.settings.overlayShowUpcoming ? s.settings.upcomingDays.clamp(1, 7) : 0,
+                    builder: (context, agenda) => agenda == null
+                        ? const SizedBox.shrink()
+                        : _OverlayList(agenda: agenda, onOpen: platform.openInMain),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -245,43 +252,51 @@ class _OverlayHeader extends StatelessWidget {
     final s = AppScope.of(context);
     final theme = Theme.of(context);
     Widget btn(IconData i, String tip, VoidCallback f, {bool active = false}) => IconButton(
-          icon: Icon(i, size: 16, color: active ? theme.colorScheme.primary : null),
-          tooltip: tip,
-          onPressed: f,
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-        );
+      icon: Icon(i, size: 16, color: active ? theme.colorScheme.primary : null),
+      tooltip: tip,
+      onPressed: f,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+    );
     return Container(
       color: theme.colorScheme.surfaceContainer,
       height: 34,
-      child: Row(children: [
-        Expanded(
-          child: DragToMoveArea(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Row(children: [
-                Icon(Icons.today, size: 16, color: theme.colorScheme.primary),
-                const SizedBox(width: 6),
-                ValueListenableBuilder(
-                  valueListenable: s.today,
-                  builder: (context, LocalDate today, _) => Text(
-                    'Today · ${Fmt.weekdayShort(today)}, ${Fmt.date(today, today)}',
-                    style: theme.textTheme.labelLarge,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+      child: Row(
+        children: [
+          Expanded(
+            child: DragToMoveArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.today, size: 16, color: theme.colorScheme.primary),
+                    const SizedBox(width: 6),
+                    ValueListenableBuilder(
+                      valueListenable: s.today,
+                      builder: (context, LocalDate today, _) => Text(
+                        'Today · ${Fmt.weekdayShort(today)}, ${Fmt.date(today, today)}',
+                        style: theme.textTheme.labelLarge,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
             ),
           ),
-        ),
-        btn(Icons.add, 'New task', onAdd),
-        btn(onTop ? Icons.push_pin : Icons.push_pin_outlined, onTop ? 'Unpin from top' : 'Keep on top', onToggleTop,
-            active: onTop),
-        btn(Icons.open_in_new, 'Open Ergon', onOpenMain),
-        btn(Icons.close, 'Close overlay', onClose),
-        const SizedBox(width: 4),
-      ]),
+          btn(Icons.add, 'New task', onAdd),
+          btn(
+            onTop ? Icons.push_pin : Icons.push_pin_outlined,
+            onTop ? 'Unpin from top' : 'Keep on top',
+            onToggleTop,
+            active: onTop,
+          ),
+          btn(Icons.open_in_new, 'Open Ergon', onOpenMain),
+          btn(Icons.close, 'Close overlay', onClose),
+          const SizedBox(width: 4),
+        ],
+      ),
     );
   }
 }
@@ -296,44 +311,64 @@ class _OverlayList extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final rows = <Widget>[];
-    void header(String t, int n, [Color? c]) => rows.add(Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
-          child: Text('$t · $n',
-              style: theme.textTheme.labelSmall?.copyWith(color: c ?? scheme.primary, fontWeight: FontWeight.w700)),
-        ));
+    void header(String t, int n, [Color? c]) => rows.add(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+        child: Text(
+          '$t · $n',
+          style: theme.textTheme.labelSmall?.copyWith(color: c ?? scheme.primary, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
     void entries(Iterable<AgendaEntry> es, {bool overdue = false}) {
       for (final e in es) {
-        rows.add(InkWell(
-          onTap: () => onOpen(e.task.id),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            child: Row(children: [
-              Container(
-                width: 4,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: AppTheme.priorityColor(e.task.priority, scheme),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        rows.add(
+          InkWell(
+            onTap: () => onOpen(e.task.id),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppTheme.priorityColor(e.task.priority, scheme),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (e.isOccurrence) ...[
+                    Icon(Icons.repeat, size: 13, color: scheme.outline),
+                    const SizedBox(width: 4),
+                  ],
+                  Expanded(
+                    child: Text(
+                      e.task.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: overdue ? scheme.error : null),
+                    ),
+                  ),
+                  if (e.minute != null)
+                    Text(
+                      MinuteOfDay.format(e.minute!),
+                      style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline),
+                    ),
+                  if (e.status != TaskStatus.notStarted)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Icon(
+                        AppTheme.statusIcon(e.status),
+                        size: 13,
+                        color: AppTheme.statusColor(e.status, scheme),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(width: 8),
-              if (e.isOccurrence) ...[Icon(Icons.repeat, size: 13, color: scheme.outline), const SizedBox(width: 4)],
-              Expanded(
-                child: Text(e.task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: overdue ? scheme.error : null)),
-              ),
-              if (e.minute != null)
-                Text(MinuteOfDay.format(e.minute!), style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline)),
-              if (e.status != TaskStatus.notStarted)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Icon(AppTheme.statusIcon(e.status), size: 13, color: AppTheme.statusColor(e.status, scheme)),
-                ),
-            ]),
+            ),
           ),
-        ));
+        );
       }
     }
 
@@ -347,15 +382,20 @@ class _OverlayList extends StatelessWidget {
       entries(s.entries);
     }
     for (final s in agenda.upcoming) {
-      header(s.date == agenda.today.addDays(1) ? 'TOMORROW' : Fmt.longDate(s.date!).toUpperCase(), s.entries.length,
-          scheme.outline);
+      header(
+        s.date == agenda.today.addDays(1) ? 'TOMORROW' : Fmt.longDate(s.date!).toUpperCase(),
+        s.entries.length,
+        scheme.outline,
+      );
       entries(s.entries);
     }
     if (agenda.isEmpty) {
-      rows.add(Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('All clear for today', style: TextStyle(color: scheme.outline)),
-      ));
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('All clear for today', style: TextStyle(color: scheme.outline)),
+        ),
+      );
     }
     return ListView(padding: const EdgeInsets.only(bottom: 8), children: rows);
   }

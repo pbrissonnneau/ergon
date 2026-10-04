@@ -15,11 +15,11 @@ class NotificationPayload {
   final int? reminderId;
 
   String encode() => [
-        'ergon',
-        't=$taskId',
-        if (occurrenceDate != null) 'd=${occurrenceDate!.epochDay}',
-        if (reminderId != null) 'r=$reminderId',
-      ].join(';');
+    'ergon',
+    't=$taskId',
+    if (occurrenceDate != null) 'd=${occurrenceDate!.epochDay}',
+    if (reminderId != null) 'r=$reminderId',
+  ].join(';');
 
   String encodeWithAction(NotificationAction a) => '${a.name}|${encode()}';
 
@@ -55,8 +55,7 @@ class NotificationPayload {
     if (t == null) return null;
     return (
       action,
-      NotificationPayload(
-          taskId: t, occurrenceDate: d == null ? null : LocalDate.fromEpochDay(d), reminderId: r)
+      NotificationPayload(taskId: t, occurrenceDate: d == null ? null : LocalDate.fromEpochDay(d), reminderId: r),
     );
   }
 

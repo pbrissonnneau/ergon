@@ -48,8 +48,8 @@ Future<void> main(List<String> args) async {
         openTask != null
             ? IpcCommand(IpcCommand.openTask, {'taskId': openTask})
             : args.contains('--new-task')
-                ? const IpcCommand(IpcCommand.quickAdd)
-                : const IpcCommand(IpcCommand.show),
+            ? const IpcCommand(IpcCommand.quickAdd)
+            : const IpcCommand(IpcCommand.show),
       );
       exit(0);
     }
@@ -58,9 +58,7 @@ Future<void> main(List<String> args) async {
       ..launchTaskId = openTask
       ..launchQuickAdd = args.contains('--new-task');
     await windowManager.ensureInitialized();
-    await windowManager.waitUntilReadyToShow(
-      const WindowOptions(title: 'Ergon', minimumSize: Size(380, 480)),
-    );
+    await windowManager.waitUntilReadyToShow(const WindowOptions(title: 'Ergon', minimumSize: Size(380, 480)));
   }
 
   // Android: notification actions tapped while the app is not running.
@@ -91,9 +89,7 @@ void startWidgetPublisher(AppServices s) {
   StreamSubscription<void>? sub;
   void resubscribe() {
     sub?.cancel();
-    sub = s.agenda
-        .watch(today: s.today.value, upcomingDays: 7)
-        .listen((a) => unawaited(s.platform.publishAgenda(a)));
+    sub = s.agenda.watch(today: s.today.value, upcomingDays: 7).listen((a) => unawaited(s.platform.publishAgenda(a)));
   }
 
   s.today.addListener(resubscribe);
@@ -118,12 +114,17 @@ Future<void> notificationBackgroundHandler(NotificationResponse response) async 
     if (action == NotificationAction.complete) {
       await reconciler.completeFromNotification(p.taskId, p.occurrenceDate);
     } else {
-      final minutes = int.tryParse((await (db.select(db.settings)
-                    ..where((s) => s.key.equals('reminders.snoozeMinutes')))
-                  .getSingleOrNull())
-              ?.value ??
-          '');
-      await reconciler.snooze(p.taskId, occurrenceDate: p.occurrenceDate, duration: Duration(minutes: minutes ?? 10));
+      final minutes = int.tryParse(
+        (await (db.select(
+              db.settings,
+            )..where((s) => s.key.equals('reminders.snoozeMinutes'))).getSingleOrNull())?.value ??
+            '',
+      );
+      await reconciler.snooze(
+        p.taskId,
+        occurrenceDate: p.occurrenceDate,
+        duration: Duration(minutes: minutes ?? 10),
+      );
     }
   } finally {
     await db.close();

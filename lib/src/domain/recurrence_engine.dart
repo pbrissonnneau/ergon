@@ -96,8 +96,11 @@ abstract final class RecurrenceEngine {
       case RecurrenceFrequency.monthly:
         final first = r.start.startOfMonth.addMonths(n);
         final d = r.monthlyMode == MonthlyMode.nthWeekday
-            ? _nthWeekday(first, r.weekdays.isEmpty ? r.start.weekday : r.weekdays.first,
-                r.weekOrdinal ?? ((r.start.day - 1) ~/ 7 + 1))
+            ? _nthWeekday(
+                first,
+                r.weekdays.isEmpty ? r.start.weekday : r.weekdays.first,
+                r.weekOrdinal ?? ((r.start.day - 1) ~/ 7 + 1),
+              )
             : _dayInMonth(first, r.monthDay ?? r.start.day);
         return d == null ? const [] : [d];
       case RecurrenceFrequency.yearly:

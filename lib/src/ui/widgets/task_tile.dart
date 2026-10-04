@@ -7,6 +7,7 @@ import '../../domain/models.dart';
 import '../formatting.dart';
 import '../task_actions.dart';
 import '../theme.dart';
+import 'live_query.dart';
 
 /// Compact, cheap-to-build row used by every task list.
 class TaskTile extends StatelessWidget {
@@ -119,8 +120,11 @@ class TaskTile extends StatelessWidget {
             if (task.priority.code >= TaskPriority.high.code)
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Icon(AppTheme.priorityIcon(task.priority),
-                    size: 18, color: AppTheme.priorityColor(task.priority, scheme)),
+                child: Icon(
+                  AppTheme.priorityIcon(task.priority),
+                  size: 18,
+                  color: AppTheme.priorityColor(task.priority, scheme),
+                ),
               ),
             if (onToggleExpanded != null && item.subtaskCount > 0)
               IconButton(
@@ -166,8 +170,8 @@ class _CompleteBox extends StatelessWidget {
             done
                 ? Icons.check_circle
                 : status == TaskStatus.cancelled
-                    ? Icons.cancel_outlined
-                    : Icons.radio_button_unchecked,
+                ? Icons.cancel_outlined
+                : Icons.radio_button_unchecked,
             size: 22,
             color: color,
           ),
@@ -195,22 +199,23 @@ class _Meta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: iconSize, color: iconColor ?? color),
-      const SizedBox(width: 3),
-      ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 220),
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: bold ? FontWeight.w600 : null,
-              ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: iconSize, color: iconColor ?? color),
+        const SizedBox(width: 3),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 220),
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: color, fontWeight: bold ? FontWeight.w600 : null),
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 }
 
@@ -255,11 +260,12 @@ class _ExpandableTaskTileState extends State<ExpandableTaskTile> {
         tile,
         Padding(
           padding: const EdgeInsets.only(left: 28),
-          child: StreamBuilder<List<TaskListItem>>(
-            stream: AppScope.of(context).tasks.watchSubtasks(widget.item.task.id),
-            builder: (context, snap) => Column(
+          child: LiveQuery<List<TaskListItem>>(
+            id: widget.item.task.id,
+            stream: () => AppScope.of(context).tasks.watchSubtasks(widget.item.task.id),
+            builder: (context, data) => Column(
               children: [
-                for (final sub in snap.data ?? const <TaskListItem>[])
+                for (final sub in data ?? const <TaskListItem>[])
                   TaskTile(
                     key: ValueKey(sub.task.id),
                     item: sub,
@@ -276,4 +282,3 @@ class _ExpandableTaskTileState extends State<ExpandableTaskTile> {
     );
   }
 }
-

@@ -132,8 +132,11 @@ abstract final class AgendaBuilder {
       if (recurring.isNotEmpty) AgendaSection(AgendaSectionKind.recurring, recurring),
       if (overdue.isNotEmpty) AgendaSection(AgendaSectionKind.overdue, overdue),
       for (final day in upcoming.keys.toList()..sort())
-        AgendaSection(AgendaSectionKind.upcoming, upcoming[day]!..sort(_byPriorityThenTime),
-            date: LocalDate.fromEpochDay(day)),
+        AgendaSection(
+          AgendaSectionKind.upcoming,
+          upcoming[day]!..sort(_byPriorityThenTime),
+          date: LocalDate.fromEpochDay(day),
+        ),
     ];
     return Agenda(today: today, sections: sections);
   }
@@ -146,8 +149,7 @@ abstract final class AgendaBuilder {
     return am.compareTo(bm);
   }
 
-  static int _byTitle(AgendaEntry a, AgendaEntry b) =>
-      a.task.title.toLowerCase().compareTo(b.task.title.toLowerCase());
+  static int _byTitle(AgendaEntry a, AgendaEntry b) => a.task.title.toLowerCase().compareTo(b.task.title.toLowerCase());
 
   static int _byTime(AgendaEntry a, AgendaEntry b) {
     final c = _cmpMinute(a, b);

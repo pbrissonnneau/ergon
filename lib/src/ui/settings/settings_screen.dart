@@ -48,9 +48,11 @@ class SettingsScreen extends StatelessWidget {
                 SwitchListTile(
                   secondary: const Icon(Icons.notifications_outlined),
                   title: const Text('Enable notifications'),
-                  subtitle: Text(s.reminders.isActive
-                      ? 'Local notifications only — no network involved'
-                      : 'Reminders are currently delivered by the Ergon overlay process'),
+                  subtitle: Text(
+                    s.reminders.isActive
+                        ? 'Local notifications only — no network involved'
+                        : 'Reminders are currently delivered by the Ergon overlay process',
+                  ),
                   value: st.notificationsEnabled,
                   onChanged: (v) async {
                     st.notificationsEnabled = v;
@@ -65,9 +67,9 @@ class SettingsScreen extends StatelessWidget {
                     onTap: () async {
                       final ok = await s.reminders.requestPermission();
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(ok ? 'Notifications are allowed' : 'Notifications are not allowed'),
-                        ));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(ok ? 'Notifications are allowed' : 'Notifications are not allowed')),
+                        );
                       }
                     },
                   ),
@@ -80,7 +82,9 @@ class SettingsScreen extends StatelessWidget {
                     onPressed: () async {
                       final m = st.defaultReminderMinute;
                       final t = await showTimePicker(
-                          context: context, initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60));
+                        context: context,
+                        initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60),
+                      );
                       if (t != null) st.defaultReminderMinute = t.hour * 60 + t.minute;
                     },
                   ),
@@ -158,8 +162,10 @@ class SettingsScreen extends StatelessWidget {
                 const ListTile(
                   leading: Icon(Icons.wifi_off),
                   title: Text('100% offline'),
-                  subtitle: Text('Ergon never connects to the Internet: no accounts, sync, analytics, telemetry, '
-                      'crash reporting or ads. Links in descriptions open in your own browser only when you click them.'),
+                  subtitle: Text(
+                    'Ergon never connects to the Internet: no accounts, sync, analytics, telemetry, '
+                    'crash reporting or ads. Links in descriptions open in your own browser only when you click them.',
+                  ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.storage_outlined),
@@ -186,10 +192,12 @@ class _Header extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-        child: Text(text,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary),
+    ),
+  );
 }
 
 class _AutostartTile extends StatefulWidget {

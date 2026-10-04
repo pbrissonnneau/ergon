@@ -57,12 +57,14 @@ void main() {
       env.tasks.createTask(TaskDraft(title: title, dueDate: due, dueMinute: minute, reminders: rs));
 
   test('schedules planned reminders and is idempotent (no duplicates)', () async {
-    await taskWith([Reminder.once(LocalDate(2026, 10, 4), 12 * 60), const Reminder.relative(60)],
-        due: LocalDate(2026, 10, 5), minute: 9 * 60);
+    await taskWith(
+      [Reminder.once(LocalDate(2026, 10, 4), 12 * 60), const Reminder.relative(60)],
+      due: LocalDate(2026, 10, 5),
+      minute: 9 * 60,
+    );
     final r1 = await rec.reconcile();
     expect(r1.scheduled, 2);
-    expect(gw.scheduled.values.map((n) => n.fireAt).toSet(),
-        {DateTime(2026, 10, 4, 12), DateTime(2026, 10, 5, 8)});
+    expect(gw.scheduled.values.map((n) => n.fireAt).toSet(), {DateTime(2026, 10, 4, 12), DateTime(2026, 10, 5, 8)});
 
     final calls = gw.scheduleCalls;
     final r2 = await rec.reconcile();
@@ -102,9 +104,16 @@ void main() {
     await taskWith([Reminder.once(LocalDate(2026, 10, 4), 12 * 60)]);
     await rec.reconcile();
     gw.scheduled.clear(); // e.g. OS dropped alarms
-    gw.scheduled[99999] = gw.scheduled[0] ??
+    gw.scheduled[99999] =
+        gw.scheduled[0] ??
         PlannedNotification(
-            instanceKey: 'x', reminderId: 0, taskId: 0, fireAt: DateTime(2030), title: 'stale', body: '');
+          instanceKey: 'x',
+          reminderId: 0,
+          taskId: 0,
+          fireAt: DateTime(2030),
+          title: 'stale',
+          body: '',
+        );
     final r = await rec.reconcile();
     expect(r.rescheduled, 1);
     expect(gw.scheduled.keys, isNot(contains(99999)));
@@ -145,7 +154,12 @@ void main() {
     await rec.reconcile();
     await env.db.into(env.db.settings).insert(SettingsCompanionHelper.disabled());
     final settingsAware = NotificationReconciler(
-        db: env.db, tasks: env.tasks, gateway: gw, clock: env.clock, settings: await loadSettings(env));
+      db: env.db,
+      tasks: env.tasks,
+      gateway: gw,
+      clock: env.clock,
+      settings: await loadSettings(env),
+    );
     await settingsAware.reconcile();
     expect(gw.scheduled, isEmpty);
   });
@@ -164,13 +178,15 @@ void main() {
     await rec.completeFromNotification(plain, null);
     expect((await env.tasks.getTask(plain))!.status, TaskStatus.completed);
 
-    final rec2 = await env.tasks.createTask(TaskDraft(
-      title: 'Learn Spanish',
-      type: TaskType.recurring,
-      recurrence: RecurrenceRule.daily(LocalDate(2026, 10, 4), every: 2),
-      dueMinute: 19 * 60,
-      reminders: [const Reminder.relative(0)],
-    ));
+    final rec2 = await env.tasks.createTask(
+      TaskDraft(
+        title: 'Learn Spanish',
+        type: TaskType.recurring,
+        recurrence: RecurrenceRule.daily(LocalDate(2026, 10, 4), every: 2),
+        dueMinute: 19 * 60,
+        reminders: [const Reminder.relative(0)],
+      ),
+    );
     await rec.reconcile();
     expect(gw.scheduled.values.where((n) => n.occurrenceDate == LocalDate(2026, 10, 4)), hasLength(1));
     await rec.completeFromNotification(rec2, LocalDate(2026, 10, 4));

@@ -36,8 +36,10 @@ class _MarkdownViewState extends State<MarkdownView> {
   List<md.Node> get nodes {
     if (_parsed != widget.data) {
       _parsed = widget.data;
-      _nodes = md.Document(extensionSet: md.ExtensionSet.gitHubFlavored, encodeHtml: false)
-          .parseLines(widget.data.replaceAll('\r\n', '\n').split('\n'));
+      _nodes = md.Document(
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+        encodeHtml: false,
+      ).parseLines(widget.data.replaceAll('\r\n', '\n').split('\n'));
     }
     return _nodes!;
   }
@@ -76,8 +78,10 @@ class _MarkdownViewState extends State<MarkdownView> {
         };
         return Padding(
           padding: const EdgeInsets.only(top: 8, bottom: 4),
-          child: Text.rich(TextSpan(children: _inlines(context, node.children)),
-              style: style?.copyWith(fontWeight: FontWeight.w600)),
+          child: Text.rich(
+            TextSpan(children: _inlines(context, node.children)),
+            style: style?.copyWith(fontWeight: FontWeight.w600),
+          ),
         );
       case 'p':
         return _para(context, _inlines(context, node.children), text.bodyMedium);
@@ -100,7 +104,9 @@ class _MarkdownViewState extends State<MarkdownView> {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.only(left: 10),
-          decoration: BoxDecoration(border: Border(left: BorderSide(color: theme.colorScheme.outline, width: 3))),
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: theme.colorScheme.outline, width: 3)),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [for (final c in node.children ?? const <md.Node>[]) ?_block(context, c, depth)],
@@ -112,7 +118,9 @@ class _MarkdownViewState extends State<MarkdownView> {
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(6)),
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(6),
+          ),
           child: Text(node.textContent, style: text.bodySmall?.copyWith(fontFamily: 'monospace')),
         );
       case 'hr':
@@ -142,11 +150,15 @@ class _MarkdownViewState extends State<MarkdownView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-                width: 22,
-                child: checkbox ? const SizedBox.shrink() : Text(bullet, style: Theme.of(context).textTheme.bodyMedium)),
+              width: 22,
+              child: checkbox ? const SizedBox.shrink() : Text(bullet, style: Theme.of(context).textTheme.bodyMedium),
+            ),
             Expanded(
-                child: Text.rich(TextSpan(children: _inlines(context, inline)),
-                    style: Theme.of(context).textTheme.bodyMedium)),
+              child: Text.rich(
+                TextSpan(children: _inlines(context, inline)),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
           ],
         ),
         ...nested,
@@ -155,9 +167,9 @@ class _MarkdownViewState extends State<MarkdownView> {
   }
 
   Widget _para(BuildContext context, List<InlineSpan> spans, TextStyle? style) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text.rich(TextSpan(children: spans), style: style),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text.rich(TextSpan(children: spans), style: style),
+  );
 
   List<InlineSpan> _inlines(BuildContext context, List<md.Node>? nodes, [TextStyle style = const TextStyle()]) {
     final out = <InlineSpan>[];
@@ -173,11 +185,15 @@ class _MarkdownViewState extends State<MarkdownView> {
           case 'del':
             out.addAll(_inlines(context, n.children, style.copyWith(decoration: TextDecoration.lineThrough)));
           case 'code':
-            out.add(TextSpan(
+            out.add(
+              TextSpan(
                 text: n.textContent,
                 style: style.copyWith(
-                    fontFamily: 'monospace',
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest)));
+                  fontFamily: 'monospace',
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+            );
           case 'br':
             out.add(const TextSpan(text: '\n'));
           case 'input':
@@ -187,12 +203,17 @@ class _MarkdownViewState extends State<MarkdownView> {
             final href = n.attributes['href'] ?? '';
             final r = TapGestureRecognizer()..onTap = () => _openLink(href);
             _recognizers.add(r);
-            out.add(TextSpan(
-              children: _inlines(context, n.children,
-                  style.copyWith(color: Theme.of(context).colorScheme.primary, decoration: TextDecoration.underline)),
-              recognizer: r,
-              mouseCursor: SystemMouseCursors.click,
-            ));
+            out.add(
+              TextSpan(
+                children: _inlines(
+                  context,
+                  n.children,
+                  style.copyWith(color: Theme.of(context).colorScheme.primary, decoration: TextDecoration.underline),
+                ),
+                recognizer: r,
+                mouseCursor: SystemMouseCursors.click,
+              ),
+            );
           default:
             out.addAll(_inlines(context, n.children, style));
         }

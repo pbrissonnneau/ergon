@@ -22,13 +22,15 @@ abstract final class DesktopAutostart {
       final f = File(_linuxDesktopFile);
       if (enabled) {
         await f.parent.create(recursive: true);
-        await f.writeAsString('[Desktop Entry]\n'
-            'Type=Application\n'
-            'Name=Ergon overlay\n'
-            'Comment=Compact agenda overlay for Ergon\n'
-            'Exec="$exe" --overlay\n'
-            'X-GNOME-Autostart-enabled=true\n'
-            'NoDisplay=true\n');
+        await f.writeAsString(
+          '[Desktop Entry]\n'
+          'Type=Application\n'
+          'Name=Ergon overlay\n'
+          'Comment=Compact agenda overlay for Ergon\n'
+          'Exec="$exe" --overlay\n'
+          'X-GNOME-Autostart-enabled=true\n'
+          'NoDisplay=true\n',
+        );
       } else if (await f.exists()) {
         await f.delete();
       }
@@ -42,8 +44,7 @@ abstract final class DesktopAutostart {
   }
 
   static String get _linuxDesktopFile {
-    final config = Platform.environment['XDG_CONFIG_HOME'] ??
-        p.join(Platform.environment['HOME'] ?? '.', '.config');
+    final config = Platform.environment['XDG_CONFIG_HOME'] ?? p.join(Platform.environment['HOME'] ?? '.', '.config');
     return p.join(config, 'autostart', 'ergon-overlay.desktop');
   }
 

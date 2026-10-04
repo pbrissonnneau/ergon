@@ -29,14 +29,15 @@ void main() {
       final id = await env.tasks.createTask(TaskDraft(title: 'A'));
       env.clock.advance(const Duration(minutes: 5));
       await env.tasks.updateTask(
-          id,
-          TaskDraft(
-            title: 'B',
-            description: '**bold**',
-            priority: TaskPriority.high,
-            dueDate: LocalDate(2026, 10, 10),
-            dueMinute: 14 * 60,
-          ));
+        id,
+        TaskDraft(
+          title: 'B',
+          description: '**bold**',
+          priority: TaskPriority.high,
+          dueDate: LocalDate(2026, 10, 10),
+          dueMinute: 14 * 60,
+        ),
+      );
       final t = (await env.tasks.getTask(id))!;
       expect(t.title, 'B');
       expect(t.description, '**bold**');
@@ -52,12 +53,14 @@ void main() {
     });
 
     test('delete cascades to subtasks, reminders and occurrences', () async {
-      final id = await env.tasks.createTask(TaskDraft(
-        title: 'Learn Spanish',
-        type: TaskType.recurring,
-        recurrence: RecurrenceRule.daily(env.today, every: 2),
-        reminders: [const Reminder.relative(0)],
-      ));
+      final id = await env.tasks.createTask(
+        TaskDraft(
+          title: 'Learn Spanish',
+          type: TaskType.recurring,
+          recurrence: RecurrenceRule.daily(env.today, every: 2),
+          reminders: [const Reminder.relative(0)],
+        ),
+      );
       await env.tasks.addSubtask(id, 'Buy Spanish book');
       await env.tasks.deleteTask(id);
       expect(await env.db.select(env.db.tasks).get(), isEmpty);
@@ -143,13 +146,15 @@ void main() {
 
     test('subtasks have their own status, priority, due date, reminders', () async {
       final id = await env.tasks.createTask(TaskDraft(title: 'Parent'));
-      final sub = await env.tasks.createTask(TaskDraft(
-        title: 'Child',
-        parentId: id,
-        priority: TaskPriority.urgent,
-        dueDate: LocalDate(2026, 10, 5),
-        reminders: [Reminder.once(LocalDate(2026, 10, 5), 8 * 60)],
-      ));
+      final sub = await env.tasks.createTask(
+        TaskDraft(
+          title: 'Child',
+          parentId: id,
+          priority: TaskPriority.urgent,
+          dueDate: LocalDate(2026, 10, 5),
+          reminders: [Reminder.once(LocalDate(2026, 10, 5), 8 * 60)],
+        ),
+      );
       final t = (await env.tasks.getTask(sub))!;
       expect(t.parentId, id);
       expect(t.priority, TaskPriority.urgent);
@@ -161,11 +166,13 @@ void main() {
 
   group('reminders persistence', () {
     test('replace keeps ids of unchanged reminders and keeps snoozes', () async {
-      final id = await env.tasks.createTask(TaskDraft(
-        title: 'A',
-        dueDate: LocalDate(2026, 10, 10),
-        reminders: [const Reminder.relative(60), const Reminder.relative(24 * 60)],
-      ));
+      final id = await env.tasks.createTask(
+        TaskDraft(
+          title: 'A',
+          dueDate: LocalDate(2026, 10, 10),
+          reminders: [const Reminder.relative(60), const Reminder.relative(24 * 60)],
+        ),
+      );
       await env.tasks.snooze(id, DateTime(2026, 10, 4, 11));
       final rs = await env.tasks.getReminders(id);
       expect(rs.length, 3);
@@ -184,15 +191,20 @@ void main() {
     late int tax, spanish, insurance;
     setUp(() async {
       final home = await env.projects.create('Household admin');
-      tax = await env.tasks.createTask(TaskDraft(
+      tax = await env.tasks.createTask(
+        TaskDraft(
           title: 'Submit tax documents',
           priority: TaskPriority.urgent,
           dueDate: LocalDate(2026, 10, 3),
-          projectId: home));
+          projectId: home,
+        ),
+      );
       spanish = await env.tasks.createTask(
-          TaskDraft(title: 'Learn Spanish', description: 'Duolingo and *grammar* book', type: TaskType.ongoing));
-      insurance = await env.tasks.createTask(TaskDraft(
-          title: 'Research insurance', type: TaskType.ongoing, dueDate: LocalDate(2026, 10, 20)));
+        TaskDraft(title: 'Learn Spanish', description: 'Duolingo and *grammar* book', type: TaskType.ongoing),
+      );
+      insurance = await env.tasks.createTask(
+        TaskDraft(title: 'Research insurance', type: TaskType.ongoing, dueDate: LocalDate(2026, 10, 20)),
+      );
       await env.tasks.setStatus(insurance, TaskStatus.waiting);
     });
 

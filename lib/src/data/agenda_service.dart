@@ -21,8 +21,9 @@ class AgendaService {
 
     void emit() {
       if (lastTasks == null || lastOcc == null) return;
-      controller.add(AgendaBuilder.build(
-          today: today, upcomingDays: upcomingDays, tasks: lastTasks!, occurrences: lastOcc!));
+      controller.add(
+        AgendaBuilder.build(today: today, upcomingDays: upcomingDays, tasks: lastTasks!, occurrences: lastOcc!),
+      );
     }
 
     controller = StreamController<Agenda>(

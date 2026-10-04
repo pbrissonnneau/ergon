@@ -25,14 +25,10 @@ abstract class _PluginGatewayBase extends NotificationGateway {
   static const _windowsGuid = '6f1f2a4e-6c1b-4f0a-9a63-6b1d0d6c9a21';
 
   InitializationSettings get _settings => const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        linux: LinuxInitializationSettings(defaultActionName: 'Open'),
-        windows: WindowsInitializationSettings(
-          appName: 'Ergon',
-          appUserModelId: 'Ergon.TaskManager',
-          guid: _windowsGuid,
-        ),
-      );
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    linux: LinuxInitializationSettings(defaultActionName: 'Open'),
+    windows: WindowsInitializationSettings(appName: 'Ergon', appUserModelId: 'Ergon.TaskManager', guid: _windowsGuid),
+  );
 
   @override
   Future<void> initialize(NotificationResponseHandler onResponse) async {
@@ -101,7 +97,7 @@ abstract class _PluginGatewayBase extends NotificationGateway {
 /// while the app is closed.
 class OsScheduledNotificationGateway extends _PluginGatewayBase {
   OsScheduledNotificationGateway([FlutterLocalNotificationsPlugin? plugin])
-      : super(plugin ?? FlutterLocalNotificationsPlugin());
+    : super(plugin ?? FlutterLocalNotificationsPlugin());
 
   @override
   bool get isInProcess => false;
@@ -166,7 +162,7 @@ class OsScheduledNotificationGateway extends _PluginGatewayBase {
 /// suspend/resume and clock changes, unlike long-running timers).
 class InProcessNotificationGateway extends _PluginGatewayBase {
   InProcessNotificationGateway({FlutterLocalNotificationsPlugin? plugin, this.tick = const Duration(seconds: 15)})
-      : super(plugin ?? FlutterLocalNotificationsPlugin());
+    : super(plugin ?? FlutterLocalNotificationsPlugin());
 
   final Duration tick;
   final Map<int, PlannedNotification> _pending = {};

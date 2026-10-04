@@ -28,23 +28,27 @@ void main() {
   List<String> titles(Agenda a, AgendaSectionKind k) =>
       a.sections.where((s) => s.kind == k).expand((s) => s.entries).map((e) => e.task.title).toList();
 
-  Future<int> add(String title,
-          {LocalDate? due,
-          int? minute,
-          TaskPriority p = TaskPriority.normal,
-          TaskType type = TaskType.oneTime,
-          TaskStatus status = TaskStatus.notStarted,
-          RecurrenceRule? rule,
-          int? parent}) =>
-      env.tasks.createTask(TaskDraft(
-          title: title,
-          dueDate: due,
-          dueMinute: minute,
-          priority: p,
-          type: type,
-          status: status,
-          recurrence: rule,
-          parentId: parent));
+  Future<int> add(
+    String title, {
+    LocalDate? due,
+    int? minute,
+    TaskPriority p = TaskPriority.normal,
+    TaskType type = TaskType.oneTime,
+    TaskStatus status = TaskStatus.notStarted,
+    RecurrenceRule? rule,
+    int? parent,
+  }) => env.tasks.createTask(
+    TaskDraft(
+      title: title,
+      dueDate: due,
+      dueMinute: minute,
+      priority: p,
+      type: type,
+      status: status,
+      recurrence: rule,
+      parentId: parent,
+    ),
+  );
 
   test('groups today / overdue / upcoming as specified', () async {
     await add('Urgent today', due: today, p: TaskPriority.urgent);
@@ -133,8 +137,9 @@ void main() {
     await env.db.batch((b) {
       for (var i = 0; i < 10000; i++) {
         b.customStatement(
-            'INSERT INTO tasks (title, type, status, priority, due_date, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
-            ['Task $i', i % 3 == 1 ? 1 : 0, i % 7 == 0 ? 2 : 0, i % 4, today.epochDay - 400 + i % 800, 0, 0]);
+          'INSERT INTO tasks (title, type, status, priority, due_date, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
+          ['Task $i', i % 3 == 1 ? 1 : 0, i % 7 == 0 ? 2 : 0, i % 4, today.epochDay - 400 + i % 800, 0, 0],
+        );
       }
     });
     final sw = Stopwatch()..start();
