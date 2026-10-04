@@ -14,6 +14,7 @@ import '../../platform/desktop/desktop_integration.dart';
 import '../../platform/desktop/instance_ipc.dart';
 import '../../platform/desktop/native_window.dart';
 import '../agenda/agenda_view.dart';
+import '../formatting.dart';
 import '../theme.dart';
 
 /// Entry point of the compact desktop overlay process (`ergon --overlay`).
@@ -265,7 +266,7 @@ class _OverlayHeader extends StatelessWidget {
                 ValueListenableBuilder(
                   valueListenable: s.today,
                   builder: (context, LocalDate today, _) => Text(
-                    'Today · ${today.day}/${today.month}',
+                    'Today · ${Fmt.weekdayShort(today)}, ${Fmt.date(today, today)}',
                     style: theme.textTheme.labelLarge,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -346,7 +347,8 @@ class _OverlayList extends StatelessWidget {
       entries(s.entries);
     }
     for (final s in agenda.upcoming) {
-      header(s.date == agenda.today.addDays(1) ? 'TOMORROW' : '${s.date}', s.entries.length, scheme.outline);
+      header(s.date == agenda.today.addDays(1) ? 'TOMORROW' : Fmt.longDate(s.date!).toUpperCase(), s.entries.length,
+          scheme.outline);
       entries(s.entries);
     }
     if (agenda.isEmpty) {

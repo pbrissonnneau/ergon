@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Today\'s tasks at a glance</string>
+    <string name="widget_empty">All clear for today</string>
+    <string name="widget_add">New task</string>
+</resources>

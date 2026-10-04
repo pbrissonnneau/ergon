@@ -45,6 +45,13 @@ class InstanceChannel {
 
   Stream<IpcCommand> get commands => _commands.stream;
 
+  /// Held lock files. They must stay strongly reachable for the whole process
+  /// lifetime: if a RandomAccessFile is garbage-collected its finalizer closes
+  /// the descriptor, which silently drops the POSIX lock. (In AOT builds a
+  /// field that is only written can be optimised away, so a static registry
+  /// is used rather than relying on an instance field.)
+  static final List<RandomAccessFile> _held = [];
+
   /// Tries to become the single live instance of [role].
   Future<bool> tryAcquire() async {
     await _ipcDir.create(recursive: true);
@@ -52,6 +59,7 @@ class InstanceChannel {
     try {
       await raf.lock(FileLock.exclusive);
       _lock = raf;
+      _held.add(raf);
       return true;
     } on FileSystemException {
       await raf.close();
@@ -126,9 +134,12 @@ class InstanceChannel {
     await _watch?.cancel();
     _poll?.cancel();
     await _commands.close();
+    final lock = _lock;
+    if (lock == null) return;
+    _held.remove(lock);
     try {
-      await _lock?.unlock();
-      await _lock?.close();
+      await lock.unlock();
+      await lock.close();
     } catch (_) {}
   }
 }

@@ -39,6 +39,11 @@ class AndroidIntegration extends PlatformIntegration {
       }
       return null;
     });
+    try {
+      if (await channel.invokeMethod<bool>('consumeLaunchQuickAdd') ?? false) _add.add(null);
+    } on MissingPluginException {
+      // No native side (tests).
+    }
   }
 
   @override

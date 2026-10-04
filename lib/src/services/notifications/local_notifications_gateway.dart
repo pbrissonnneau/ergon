@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -170,14 +171,28 @@ class InProcessNotificationGateway extends _PluginGatewayBase {
   final Duration tick;
   final Map<int, PlannedNotification> _pending = {};
   Timer? _timer;
+  bool _available = true;
 
   @override
   bool get isInProcess => true;
 
   @override
   Future<void> initialize(NotificationResponseHandler onResponse) async {
-    await super.initialize(onResponse);
+    // Desktop notifications go through the D-Bus session bus. Without one
+    // (minimal sessions, some containers) the app keeps working silently.
+    _available = Platform.isLinux ? await _sessionBusAvailable() : true;
+    if (_available) await super.initialize(onResponse);
     _timer = Timer.periodic(tick, (_) => _deliverDue());
+  }
+
+  static Future<bool> _sessionBusAvailable() async {
+    final address = Platform.environment['DBUS_SESSION_BUS_ADDRESS'];
+    if (address != null && address.isNotEmpty) {
+      final path = RegExp(r'unix:path=([^,;]+)').firstMatch(address)?.group(1);
+      return path == null || File(path).existsSync();
+    }
+    final runtime = Platform.environment['XDG_RUNTIME_DIR'];
+    return runtime != null && File('$runtime/bus').existsSync();
   }
 
   @override
@@ -199,6 +214,10 @@ class InProcessNotificationGateway extends _PluginGatewayBase {
     final due = _pending.entries.where((e) => !e.value.fireAt.isAfter(now)).toList();
     for (final e in due) {
       _pending.remove(e.key);
+      if (!_available) {
+        onDelivered?.call(e.key);
+        continue;
+      }
       try {
         await plugin.show(
           id: e.key,
