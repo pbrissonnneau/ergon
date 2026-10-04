@@ -19,12 +19,30 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
-// Implements GApplication::activate.
-static void my_application_activate(GApplication* application) {
-  MyApplication* self = MY_APPLICATION(application);
-  GtkWindow* window =
-      GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+// Whether this process runs the compact desktop overlay (`--overlay`).
+static gboolean is_overlay(MyApplication* self) {
+  if (self->dart_entrypoint_arguments == nullptr) return FALSE;
+  for (gchar** arg = self->dart_entrypoint_arguments; *arg != nullptr; arg++) {
+    if (g_strcmp0(*arg, "--overlay") == 0) return TRUE;
+  }
+  return FALSE;
+}
 
+// Overlay: undecorated utility window, hidden from the taskbar/pager and kept
+// above other windows where the window manager allows it. On Wayland,
+// compositors may ignore these hints; the overlay then behaves like a normal
+// small window and the main application is unaffected.
+static void configure_overlay_window(GtkWindow* window) {
+  gtk_window_set_title(window, "Ergon overlay");
+  gtk_window_set_decorated(window, FALSE);
+  gtk_window_set_type_hint(window, GDK_WINDOW_TYPE_HINT_UTILITY);
+  gtk_window_set_skip_taskbar_hint(window, TRUE);
+  gtk_window_set_skip_pager_hint(window, TRUE);
+  gtk_window_set_keep_above(window, TRUE);
+  gtk_window_set_default_size(window, 320, 420);
+}
+
+static void configure_main_window(GtkWindow* window) {
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
   // desktop).
@@ -45,14 +63,27 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "ergon");
+    gtk_header_bar_set_title(header_bar, "Ergon");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "ergon");
+    gtk_window_set_title(window, "Ergon");
   }
 
-  gtk_window_set_default_size(window, 1280, 720);
+  gtk_window_set_default_size(window, 1100, 760);
+}
+
+// Implements GApplication::activate.
+static void my_application_activate(GApplication* application) {
+  MyApplication* self = MY_APPLICATION(application);
+  GtkWindow* window =
+      GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+
+  if (is_overlay(self)) {
+    configure_overlay_window(window);
+  } else {
+    configure_main_window(window);
+  }
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(

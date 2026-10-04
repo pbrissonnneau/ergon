@@ -20,6 +20,7 @@ class DesktopIntegration extends PlatformIntegration {
   /// The main-role channel; acquired in `main.dart` before the UI starts.
   InstanceChannel? mainChannel;
   int? launchTaskId;
+  bool launchQuickAdd = false;
 
   final _open = StreamController<int>.broadcast();
   final _add = StreamController<void>.broadcast();
@@ -66,6 +67,7 @@ class DesktopIntegration extends PlatformIntegration {
       }
     });
     await ch.listen();
+    if (launchQuickAdd) _add.add(null);
   }
 
   @override
@@ -86,6 +88,10 @@ class DesktopIntegration extends PlatformIntegration {
     }
   }
 
+  @override
+  Future<bool?> overlayAutostartEnabled() => DesktopAutostart.isOverlayAutostartEnabled();
+
+  @override
   Future<void> setOverlayAutostart(bool enabled) => DesktopAutostart.setOverlayAutostart(enabled);
 
   @override

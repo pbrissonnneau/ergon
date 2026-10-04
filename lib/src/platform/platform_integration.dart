@@ -48,6 +48,10 @@ abstract class PlatformIntegration {
   /// Shows / hides the desktop overlay (no-op where unsupported).
   Future<void> setOverlayVisible(bool visible) async {}
 
+  /// Login autostart of the overlay; null when unsupported.
+  Future<bool?> overlayAutostartEnabled() async => null;
+  Future<void> setOverlayAutostart(bool enabled) async {}
+
   /// Brings the main window to the foreground.
   Future<void> bringToFront() async {}
 

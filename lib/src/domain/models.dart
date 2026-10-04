@@ -63,7 +63,7 @@ class Task {
   bool get isSubtask => parentId != null;
 
   /// Local due instant; date-only tasks are due at the end of their day.
-  DateTime? get dueDateTime => dueDate == null ? null : dueDate!.atMinute(dueMinute ?? 24 * 60 - 1);
+  DateTime? get dueDateTime => dueDate?.atMinute(dueMinute ?? 24 * 60 - 1);
 }
 
 /// A materialised (or virtual, when [id] is null) occurrence of a recurring task.

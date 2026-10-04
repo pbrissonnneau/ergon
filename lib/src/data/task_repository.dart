@@ -258,8 +258,9 @@ class TaskRepository {
         return id;
       });
 
-  /// Replaces a task's editable fields and its reminder set.
-  Future<void> updateTask(int id, TaskDraft d) => db.transaction(() async {
+  /// Replaces a task's editable fields and (unless [replaceReminders] is
+  /// false, e.g. when reminders are edited individually) its reminder set.
+  Future<void> updateTask(int id, TaskDraft d, {bool replaceReminders = true}) => db.transaction(() async {
         final old = await (db.select(db.tasks)..where((t) => t.id.equals(id))).getSingle();
         final now = _now;
         final today = _today;
@@ -301,7 +302,7 @@ class TaskRepository {
             updates: {db.occurrences},
           );
         }
-        await _replaceReminders(id, d.reminders, now);
+        if (replaceReminders) await _replaceReminders(id, d.reminders, now);
         if (recurring) await _materializeTask(id);
       });
 

@@ -9,6 +9,10 @@ import 'notification_payload.dart';
 import 'reminder_planner.dart';
 
 const _channelId = 'ergon_reminders';
+
+/// Top-level `@pragma('vm:entry-point')` handler for notification actions
+/// tapped while the app is not running (Android). Set from `main.dart`.
+DidReceiveBackgroundNotificationResponseCallback? notificationBackgroundEntryPoint;
 const _channelName = 'Task reminders';
 
 /// Common setup for `flutter_local_notifications` on every platform.
@@ -35,12 +39,9 @@ abstract class _PluginGatewayBase extends NotificationGateway {
     await plugin.initialize(
       settings: _settings,
       onDidReceiveNotificationResponse: _onResponse,
-      onDidReceiveBackgroundNotificationResponse: backgroundResponseEntryPoint,
+      onDidReceiveBackgroundNotificationResponse: notificationBackgroundEntryPoint,
     );
   }
-
-  /// Set by the app for Android's background isolate entry point.
-  static DidReceiveBackgroundNotificationResponseCallback? backgroundResponseEntryPoint;
 
   void _onResponse(NotificationResponse r) {
     final parsed = NotificationPayload.parse(r.payload, actionId: r.actionId);

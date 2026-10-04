@@ -56,15 +56,34 @@ class AppServices {
   late final ReminderHost reminders;
 
   final _openRequests = StreamController<int>.broadcast();
+
+  /// The current civil day; ticks at local midnight and on resume so every
+  /// screen rolls over without polling.
+  late final ValueNotifier<LocalDate> today = ValueNotifier(clock.today());
+  Timer? _midnight;
   Timer? _externalPoll;
   int? _dataVersion;
 
   /// Requests to open a task coming from notifications, widget, overlay.
   Stream<int> get openTaskRequests => _openRequests.stream;
 
+  /// Re-evaluates [today] (call on app resume too) and re-arms the midnight timer.
+  void refreshDay() {
+    final now = clock.now();
+    final d = LocalDate.fromDateTime(now);
+    if (d != today.value) {
+      today.value = d;
+      unawaited(tasks.materializeAll());
+    }
+    _midnight?.cancel();
+    final next = d.addDays(1).atMinute(0).add(const Duration(seconds: 1));
+    _midnight = Timer(next.difference(now), refreshDay);
+  }
+
   /// Background start-up work, run after the first frame so it never delays
   /// the initial paint.
   Future<void> startBackground({bool watchExternalChanges = false}) async {
+    refreshDay();
     platform.openTaskRequests.listen(_openRequests.add);
     await platform.start();
     final initial = await platform.initialTaskToOpen();
@@ -92,6 +111,7 @@ class AppServices {
 
   Future<void> dispose() async {
     _externalPoll?.cancel();
+    _midnight?.cancel();
     await reminders.dispose();
     await platform.dispose();
     await db.close();

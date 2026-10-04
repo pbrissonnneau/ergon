@@ -6,8 +6,6 @@ import 'package:ergon/src/services/notifications/notification_gateway.dart';
 import 'package:ergon/src/services/notifications/notification_payload.dart';
 import 'package:ergon/src/services/notifications/notification_reconciler.dart';
 import 'package:ergon/src/services/notifications/reminder_planner.dart';
-// ignore: depend_on_referenced_packages
-import 'package:ergon/src/data/database.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
