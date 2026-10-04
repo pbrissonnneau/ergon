@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=Ergon
+GenericName=Task manager
+Comment=Offline task manager and agenda
+Exec=ergon %U
+Icon=app.ergon.ergon
+Terminal=false
+Categories=Office;ProjectManagement;Utility;
+StartupWMClass=app.ergon.ergon
+Actions=new-task;overlay;
+
+[Desktop Action new-task]
+Name=New task
+Exec=ergon --new-task
+
+[Desktop Action overlay]
+Name=Show overlay
+Exec=ergon --overlay

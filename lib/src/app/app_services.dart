@@ -70,6 +70,7 @@ class AppServices {
     if (d != today.value) {
       today.value = d;
       unawaited(tasks.materializeAll());
+      reminders.scheduleReconcile();
     }
     _midnight?.cancel();
     final next = d.addDays(1).atMinute(0).add(const Duration(seconds: 1));
