@@ -120,9 +120,11 @@ List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overd
 }
 
 class AgendaEntryTile extends StatelessWidget {
-  const AgendaEntryTile({super.key, required this.entry, required this.today});
+  const AgendaEntryTile({super.key, required this.entry, required this.today, this.selected, this.onSelect});
   final AgendaEntry entry;
   final LocalDate today;
+  final bool? selected;
+  final VoidCallback? onSelect;
 
   @override
   Widget build(BuildContext context) => ExpandableTaskTile(
@@ -138,5 +140,7 @@ class AgendaEntryTile extends StatelessWidget {
             occ != null ? tasks.archiveOccurrence(entry.task.id, occ.date) : tasks.archiveTask(entry.task.id);
           }
         : null,
+    selected: selected,
+    onSelect: onSelect,
   );
 }

@@ -171,57 +171,62 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
         const SingleActivator(LogicalKeyboardKey.numpadEnter, control: true): _saveAndClose,
         const SingleActivator(LogicalKeyboardKey.enter, meta: true): _saveAndClose,
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: _Breadcrumb(ancestry: _ancestry),
-          actions: [
-            IconButton(
-              tooltip: d.status == TaskStatus.completed ? 'Mark as not completed' : 'Mark as completed',
-              icon: Icon(d.status == TaskStatus.completed ? Icons.check_circle : Icons.check_circle_outline),
-              onPressed: () => _update(
-                (d) => d.status = d.status == TaskStatus.completed ? TaskStatus.notStarted : TaskStatus.completed,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Delete',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () async {
-                if (await TaskActions.confirmDelete(context, task) && context.mounted) Navigator.of(context).pop();
-              },
-            ),
-          ],
-        ),
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 48),
-              children: [
-                TextField(
-                  controller: _title,
-                  autofocus: widget.isNew,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  maxLines: null,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(border: InputBorder.none, hintText: 'Task title'),
-                  onChanged: (_) => _onTextChanged(),
+      // Takes focus so Esc / Ctrl+Enter work right away (the title field
+      // takes it instead for a new task).
+      child: Focus(
+        autofocus: !widget.isNew,
+        child: Scaffold(
+          appBar: AppBar(
+            title: _Breadcrumb(ancestry: _ancestry),
+            actions: [
+              IconButton(
+                tooltip: d.status == TaskStatus.completed ? 'Mark as not completed' : 'Mark as completed',
+                icon: Icon(d.status == TaskStatus.completed ? Icons.check_circle : Icons.check_circle_outline),
+                onPressed: () => _update(
+                  (d) => d.status = d.status == TaskStatus.completed ? TaskStatus.notStarted : TaskStatus.completed,
                 ),
-                const SizedBox(height: 4),
-                _properties(context, d, task),
-                const SizedBox(height: 8),
-                _schedule(context, d, today),
-                const SizedBox(height: 8),
-                _RemindersSection(task: task, hasDue: d.dueDate != null || d.recurrence != null),
-                const SizedBox(height: 16),
-                _sectionTitle(context, 'Description'),
-                MarkdownEditor(controller: _description, startInPreview: true, onChanged: (_) => _onTextChanged()),
-                const SizedBox(height: 16),
-                _SubtasksSection(parent: task),
-                if (task.isRecurring) ...[const SizedBox(height: 16), _OccurrencesSection(task: task)],
-                const SizedBox(height: 24),
-                _footer(context, task, today),
-              ],
+              ),
+              IconButton(
+                tooltip: 'Delete',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () async {
+                  if (await TaskActions.confirmDelete(context, task) && context.mounted) Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 48),
+                children: [
+                  TextField(
+                    controller: _title,
+                    autofocus: widget.isNew,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    maxLines: null,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(border: InputBorder.none, hintText: 'Task title'),
+                    onChanged: (_) => _onTextChanged(),
+                  ),
+                  const SizedBox(height: 4),
+                  _properties(context, d, task),
+                  const SizedBox(height: 8),
+                  _schedule(context, d, today),
+                  const SizedBox(height: 8),
+                  _RemindersSection(task: task, hasDue: d.dueDate != null || d.recurrence != null),
+                  const SizedBox(height: 16),
+                  _sectionTitle(context, 'Description'),
+                  MarkdownEditor(controller: _description, startInPreview: true, onChanged: (_) => _onTextChanged()),
+                  const SizedBox(height: 16),
+                  _SubtasksSection(parent: task),
+                  if (task.isRecurring) ...[const SizedBox(height: 16), _OccurrencesSection(task: task)],
+                  const SizedBox(height: 24),
+                  _footer(context, task, today),
+                ],
+              ),
             ),
           ),
         ),

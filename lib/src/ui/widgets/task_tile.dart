@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/app_services.dart';
 import '../../core/local_date.dart';
@@ -8,6 +9,7 @@ import '../formatting.dart';
 import '../task_actions.dart';
 import '../theme.dart';
 import 'live_query.dart';
+import 'task_drag.dart';
 
 /// Compact, cheap-to-build row used by every task list.
 class TaskTile extends StatelessWidget {
@@ -24,6 +26,8 @@ class TaskTile extends StatelessWidget {
     this.onToggleExpanded,
     this.dense = false,
     this.onRemove,
+    this.selected,
+    this.onSelect,
   });
 
   final TaskListItem item;
@@ -39,6 +43,12 @@ class TaskTile extends StatelessWidget {
 
   /// Shown for completed agenda entries: remove from the agenda now.
   final VoidCallback? onRemove;
+
+  /// Multi-select: non-null shows a checkbox and taps toggle selection.
+  final bool? selected;
+
+  /// Toggles selection (also reachable with Ctrl+click outside selection mode).
+  final VoidCallback? onSelect;
 
   Task get task => item.task;
   TaskStatus get status => occurrence?.status ?? task.status;
@@ -82,14 +92,23 @@ class TaskTile extends StatelessWidget {
       if (task.description.isNotEmpty) Icon(Icons.notes, size: 14, color: scheme.outline),
     ];
 
-    return InkWell(
-      onTap: () => TaskActions.open(context, task.id),
+    final tile = InkWell(
+      onTap: () {
+        final ctrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+        if (onSelect != null && (selected != null || ctrl)) {
+          onSelect!();
+        } else {
+          TaskActions.open(context, task.id);
+        }
+      },
       onLongPress: () => TaskActions.showQuickActions(context, item, occurrence: occurrence),
       onSecondaryTapUp: (TapUpDetails _) => TaskActions.showQuickActions(context, item, occurrence: occurrence),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 4, vertical: dense ? 0 : 2),
         child: Row(
           children: [
+            if (selected != null)
+              Checkbox(value: selected, onChanged: (_) => onSelect?.call(), visualDensity: VisualDensity.compact),
             // Project colour marker (projects are the task's container).
             Container(
               width: 4,
@@ -162,6 +181,11 @@ class TaskTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+    return DraggableTask(
+      data: TaskDragData(task, occurrenceDate: occurrence?.date),
+      enabled: selected == null && AppScope.of(context).platform.isDesktop,
+      child: tile,
     );
   }
 }
@@ -249,6 +273,8 @@ class ExpandableTaskTile extends StatefulWidget {
     this.missedCount = 0,
     this.showProject = true,
     this.onRemove,
+    this.selected,
+    this.onSelect,
   });
   final TaskListItem item;
   final Occurrence? occurrence;
@@ -256,6 +282,8 @@ class ExpandableTaskTile extends StatefulWidget {
   final int missedCount;
   final bool showProject;
   final VoidCallback? onRemove;
+  final bool? selected;
+  final VoidCallback? onSelect;
 
   @override
   State<ExpandableTaskTile> createState() => _ExpandableTaskTileState();
@@ -273,6 +301,8 @@ class _ExpandableTaskTileState extends State<ExpandableTaskTile> {
       missedCount: widget.missedCount,
       showProject: widget.showProject,
       onRemove: widget.onRemove,
+      selected: widget.selected,
+      onSelect: widget.onSelect,
       expanded: _expanded,
       onToggleExpanded: () => setState(() => _expanded = !_expanded),
     );

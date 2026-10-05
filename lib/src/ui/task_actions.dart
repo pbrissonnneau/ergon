@@ -4,6 +4,7 @@ import '../app/app_services.dart';
 import '../core/local_date.dart';
 import '../domain/enums.dart';
 import '../domain/models.dart';
+import 'bulk_actions.dart';
 import 'editor/task_editor_page.dart';
 import 'theme.dart';
 import 'widgets/live_query.dart';
@@ -162,6 +163,38 @@ class _QuickActionsSheet extends StatelessWidget {
                           close();
                         },
                       ),
+                  ],
+                ),
+              ),
+            ],
+            if (occurrence != null || !task.isRecurring) ...[
+              label(occurrence != null ? 'This occurrence' : 'Reschedule'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (occurrence != null)
+                      ActionChip(
+                        avatar: const Icon(Icons.skip_next, size: 18),
+                        label: const Text('Skip'),
+                        onPressed: () {
+                          close();
+                          s.tasks.skipOccurrences(task.id, occurrence!.date);
+                        },
+                      )
+                    else
+                      for (final t in RescheduleTarget.values)
+                        ActionChip(
+                          avatar: Icon(t.icon, size: 18),
+                          label: Text(t.label),
+                          onPressed: () async {
+                            close();
+                            final (cancelled, date) = await BulkActions.resolve(hostContext, t, s.clock.today());
+                            if (!cancelled) await s.tasks.rescheduleTasks([task.id], date);
+                          },
+                        ),
                   ],
                 ),
               ),

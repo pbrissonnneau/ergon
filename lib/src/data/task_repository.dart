@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 
 import '../core/local_date.dart';
@@ -237,6 +239,152 @@ class TaskRepository {
         }).toList(),
       );
 
+  /// Per-day activity for the mini calendar over [from]..[to] (inclusive):
+  /// tasks and occurrences due that day (done or not, cancelled excluded) and
+  /// tasks completed that day.
+  Stream<Map<int, List<DayCell>>> watchDayActivity(LocalDate from, LocalDate to) {
+    final startMs = _startOfDayMs(from), endMs = _startOfDayMs(to.addDays(1));
+    return db
+        .customSelect(
+          '''
+      SELECT t.id AS id, t.title AS title, p.color AS color, t.status AS status, t.due_date AS day, t.completed_at AS done_at
+      FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
+      WHERE t.type != 2 AND t.status != 6 AND
+        ((t.due_date BETWEEN ?1 AND ?2) OR (t.status = 2 AND t.completed_at >= ?3 AND t.completed_at < ?4))
+      UNION ALL
+      SELECT t.id, t.title, p.color, o.status, o.date, o.completed_at
+      FROM occurrences o JOIN tasks t ON t.id = o.task_id LEFT JOIN projects p ON p.id = t.project_id
+      WHERE o.status != 6 AND o.date BETWEEN ?1 AND ?2''',
+          variables: [
+            Variable.withInt(from.epochDay),
+            Variable.withInt(to.epochDay),
+            Variable.withInt(startMs),
+            Variable.withInt(endMs),
+          ],
+          readsFrom: {db.tasks, db.occurrences, db.projects},
+        )
+        .watch()
+        .map((rows) {
+          final out = <int, List<DayCell>>{};
+          final seen = <(int, int)>{};
+          void add(int day, QueryRow r, bool done) {
+            if (day < from.epochDay || day > to.epochDay || !seen.add((r.read<int>('id'), day))) return;
+            out
+                .putIfAbsent(day, () => [])
+                .add(
+                  DayCell(
+                    taskId: r.read<int>('id'),
+                    title: r.read<String>('title'),
+                    projectColor: r.readNullable<int>('color'),
+                    done: done,
+                  ),
+                );
+          }
+
+          for (final r in rows) {
+            final done = r.read<int>('status') == TaskStatus.completed.code;
+            final doneAt = r.readNullable<int>('done_at');
+            final due = r.readNullable<int>('day');
+            // A completed task counts on the day it was completed; otherwise on its due day.
+            if (done && doneAt != null) {
+              add(LocalDate.fromDateTime(DateTime.fromMillisecondsSinceEpoch(doneAt)).epochDay, r, true);
+            } else if (due != null) {
+              add(due, r, done);
+            }
+          }
+          return out;
+        });
+  }
+
+  /// Everything completed between [from] and [to] (inclusive), by local day:
+  /// the agenda's history when scrolling into the past.
+  Stream<List<CompletedItem>> watchCompleted(LocalDate from, LocalDate to) {
+    final startMs = _startOfDayMs(from), endMs = _startOfDayMs(to.addDays(1));
+    final tasks = db
+        .customSelect(
+          'SELECT $_listColumns $_listJoins WHERE t.status = 2 AND t.type != 2 '
+          'AND t.completed_at >= ? AND t.completed_at < ? ORDER BY t.completed_at DESC',
+          variables: [Variable.withInt(startMs), Variable.withInt(endMs)],
+          readsFrom: {db.tasks, db.projects},
+        )
+        .watch();
+    final occurrences = db
+        .customSelect(
+          'SELECT $_listColumns, o.date AS o_date, o.due_minute AS o_due_minute, o.completed_at AS o_done '
+          'FROM occurrences o JOIN tasks t ON t.id = o.task_id '
+          'LEFT JOIN projects p ON p.id = t.project_id LEFT JOIN tasks par ON par.id = t.parent_id '
+          'WHERE o.status = 2 AND o.completed_at >= ? AND o.completed_at < ? ORDER BY o.completed_at DESC',
+          variables: [Variable.withInt(startMs), Variable.withInt(endMs)],
+          readsFrom: {db.tasks, db.projects, db.occurrences},
+        )
+        .watch();
+    LocalDate dayOf(int ms) => LocalDate.fromDateTime(DateTime.fromMillisecondsSinceEpoch(ms));
+    return _combine(tasks, occurrences, (ts, os) {
+      final out = <CompletedItem>[
+        for (final r in ts) CompletedItem(item: _listItem(r), day: dayOf(r.read<int>('completed_at'))),
+        for (final r in os)
+          () {
+            final item = _listItem(r);
+            return CompletedItem(
+              item: item,
+              day: dayOf(r.read<int>('o_done')),
+              occurrence: Occurrence(
+                taskId: item.task.id,
+                date: LocalDate.fromEpochDay(r.read<int>('o_date')),
+                dueMinute: r.readNullable<int>('o_due_minute'),
+                status: TaskStatus.completed,
+              ),
+            );
+          }(),
+      ];
+      return out;
+    });
+  }
+
+  /// Earliest completion date in the database (bounds history scrolling).
+  Future<LocalDate?> earliestCompletion() async {
+    final r = await db
+        .customSelect(
+          'SELECT MIN(m) AS m FROM (SELECT MIN(completed_at) AS m FROM tasks WHERE status = 2 '
+          'UNION ALL SELECT MIN(completed_at) FROM occurrences WHERE status = 2)',
+        )
+        .getSingle();
+    final ms = r.readNullable<int>('m');
+    return ms == null ? null : LocalDate.fromDateTime(DateTime.fromMillisecondsSinceEpoch(ms));
+  }
+
+  static Stream<R> _combine<A, B, R>(Stream<A> a, Stream<B> b, R Function(A, B) f) {
+    late StreamController<R> c;
+    StreamSubscription<A>? sa;
+    StreamSubscription<B>? sb;
+    A? la;
+    B? lb;
+    var hasA = false, hasB = false;
+    void emit() {
+      if (hasA && hasB) c.add(f(la as A, lb as B));
+    }
+
+    c = StreamController<R>(
+      onListen: () {
+        sa = a.listen((v) {
+          la = v;
+          hasA = true;
+          emit();
+        }, onError: c.addError);
+        sb = b.listen((v) {
+          lb = v;
+          hasB = true;
+          emit();
+        }, onError: c.addError);
+      },
+      onCancel: () async {
+        await sa?.cancel();
+        await sb?.cancel();
+      },
+    );
+    return c.stream;
+  }
+
   // ---------------------------------------------------------------------------
   // Writes
   // ---------------------------------------------------------------------------
@@ -375,6 +523,46 @@ class TaskRepository {
     if (status.isClosed) {
       // Pending snoozes of a closed task are pointless.
       await (db.delete(db.reminders)..where((r) => r.taskId.equals(id) & r.kind.equals(ReminderKind.snooze.code))).go();
+    }
+  });
+
+  /// Moves non-recurring tasks to [date], keeping their time of day.
+  Future<void> rescheduleTasks(Iterable<int> ids, LocalDate? date) async {
+    final list = ids.toList();
+    if (list.isEmpty) return;
+    await (db.update(db.tasks)..where((t) => t.id.isIn(list) & t.type.isNotValue(TaskType.recurring.code))).write(
+      TasksCompanion(dueDate: Value(date?.epochDay), updatedAt: Value(_now)),
+    );
+    if (date == null) {
+      await (db.update(db.tasks)..where((t) => t.id.isIn(list))).write(const TasksCompanion(dueMinute: Value(null)));
+    }
+  }
+
+  /// Skips open occurrences of a recurring task up to and including [upTo]
+  /// (marked Cancelled, so history shows they were skipped, not done).
+  Future<int> skipOccurrences(int taskId, LocalDate upTo) => db.transaction(() async {
+    final n =
+        await (db.update(db.occurrences)..where(
+              (o) =>
+                  o.taskId.equals(taskId) &
+                  o.date.isSmallerOrEqualValue(upTo.epochDay) &
+                  o.status.isIn(TaskStatus.agendaCodes),
+            ))
+            .write(OccurrencesCompanion(status: Value(TaskStatus.cancelled.code), updatedAt: Value(_now)));
+    await _refreshNextDue(taskId);
+    return n;
+  });
+
+  Future<void> setPriorityMany(Iterable<int> ids, TaskPriority priority) =>
+      (db.update(db.tasks)..where((t) => t.id.isIn(ids.toList()))).write(
+        TasksCompanion(priority: Value(priority.code), updatedAt: Value(_now)),
+      );
+
+  /// Moves several top-level tasks (with their subtasks) to [projectId].
+  Future<void> moveManyToProject(Iterable<int> ids, int? projectId) => db.transaction(() async {
+    for (final id in ids) {
+      final t = await (db.select(db.tasks)..where((x) => x.id.equals(id))).getSingleOrNull();
+      if (t != null && t.parentId == null) await moveToProject(id, projectId);
     }
   });
 

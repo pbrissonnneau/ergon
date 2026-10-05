@@ -1,12 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app/app_services.dart';
+import '../../core/local_date.dart';
 import '../../domain/agenda.dart';
+import '../../domain/models.dart';
+import '../bulk_actions.dart';
 import '../editor/quick_add.dart';
 import '../formatting.dart';
+import '../widgets/live_query.dart';
+import '../widgets/task_tile.dart';
 import 'agenda_view.dart';
+import 'week_strip.dart';
 
 /// Main screen: "What do I need to deal with today?"
+///
+/// Today/overdue/upcoming are below the fold anchor; scrolling *up* reveals
+/// past days with what was completed each day (weekly review).
 class AgendaScreen extends StatefulWidget {
   const AgendaScreen({super.key});
 
@@ -16,6 +27,17 @@ class AgendaScreen extends StatefulWidget {
 
 class _AgendaScreenState extends State<AgendaScreen> {
   bool _overdueCollapsed = false;
+
+  /// Keys of selected entries (multi-select); empty = normal mode.
+  final _selected = <String>{};
+  bool _selecting = false;
+  Agenda? _agenda;
+
+  /// How many past days are loaded (grows while scrolling up).
+  int _pastDays = 14;
+  LocalDate? _earliest;
+  bool _earliestLoaded = false;
+  final _centerKey = UniqueKey();
 
   static const _upcomingChoices = [
     (0, 'Today only'),
@@ -27,34 +49,92 @@ class _AgendaScreenState extends State<AgendaScreen> {
   ];
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_earliestLoaded) {
+      _earliestLoaded = true;
+      unawaited(
+        AppScope.of(context).tasks.earliestCompletion().then((d) {
+          if (mounted) setState(() => _earliest = d);
+        }),
+      );
+    }
+  }
+
+  List<AgendaEntry> get _selectedEntries =>
+      _agenda?.sections.expand((s) => s.entries).where((e) => _selected.contains(e.key)).toList() ?? const [];
+
+  void _toggle(AgendaEntry e) => setState(() {
+    _selecting = true;
+    _selected.contains(e.key) ? _selected.remove(e.key) : _selected.add(e.key);
+  });
+
+  void _exitSelection() => setState(() {
+    _selecting = false;
+    _selected.clear();
+  });
+
+  @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final wide = MediaQuery.sizeOf(context).width >= 560;
     return AgendaBuilderWidget(
       builder: (context, agenda) {
+        _agenda = agenda;
+        // Drop selections that disappeared (completed elsewhere, etc.).
+        if (agenda != null && _selected.isNotEmpty) {
+          final keys = agenda.sections.expand((s) => s.entries).map((e) => e.key).toSet();
+          _selected.retainWhere(keys.contains);
+        }
         return Scaffold(
           appBar: AppBar(
             titleSpacing: 16,
-            title: ValueListenableBuilder(
-              valueListenable: s.today,
-              builder: (context, today, _) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Agenda'),
-                  Text(
-                    Fmt.longDate(today),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.outline),
+            toolbarHeight: wide ? 64 : 56,
+            title: Row(
+              children: [
+                ValueListenableBuilder(
+                  valueListenable: s.today,
+                  builder: (context, today, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Agenda'),
+                      Text(
+                        Fmt.longDate(today),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.outline),
+                      ),
+                    ],
+                  ),
+                ),
+                if (wide) ...[
+                  const SizedBox(width: 20),
+                  const Flexible(
+                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: WeekStrip()),
                   ),
                 ],
-              ),
+              ],
             ),
+            bottom: wide
+                ? null
+                : const PreferredSize(
+                    preferredSize: Size.fromHeight(60),
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: FittedBox(fit: BoxFit.scaleDown, child: WeekStrip(square: 30)),
+                    ),
+                  ),
             actions: [
-              if ((agenda?.completedCount ?? 0) > 0)
+              if ((agenda?.completedCount ?? 0) > 0 && !_selecting)
                 TextButton.icon(
                   onPressed: s.tasks.archiveAllCompleted,
                   icon: const Icon(Icons.clear_all, size: 18),
                   label: Text('Clear completed (${agenda!.completedCount})'),
                 ),
+              IconButton(
+                tooltip: _selecting ? 'Cancel selection' : 'Select tasks (or Ctrl+click)',
+                icon: Icon(_selecting ? Icons.close : Icons.checklist_rtl),
+                onPressed: () => _selecting ? _exitSelection() : setState(() => _selecting = true),
+              ),
               ListenableBuilder(
                 listenable: s.settings,
                 builder: (context, _) => PopupMenuButton<int>(
@@ -75,52 +155,219 @@ class _AgendaScreenState extends State<AgendaScreen> {
             ],
           ),
           body: agenda == null ? const SizedBox.shrink() : _body(context, agenda),
+          bottomNavigationBar: _selecting ? _selectionBar(context) : null,
         );
       },
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Multi-select action bar
+  // ---------------------------------------------------------------------------
+
+  Widget _selectionBar(BuildContext context) {
+    final s = AppScope.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final n = _selected.length;
+    Future<void> apply(Object? choice) async {
+      final entries = _selectedEntries;
+      if (entries.isEmpty) return;
+      await BulkActions.applyMenuChoice(context, s, choice, entries);
+      if (mounted) _exitSelection();
+    }
+
+    Widget menu(String label, IconData icon, List<PopupMenuEntry<Object>> Function() items) => PopupMenuButton<Object>(
+      enabled: n > 0,
+      tooltip: label,
+      onSelected: apply,
+      itemBuilder: (_) => items(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [Icon(icon, size: 20), const SizedBox(width: 4), Text(label)],
+        ),
+      ),
+    );
+
+    return BottomAppBar(
+      height: 64,
+      child: Row(
+        children: [
+          Text(n == 0 ? 'Select tasks' : '$n selected', style: TextStyle(color: scheme.primary)),
+          const Spacer(),
+          Flexible(
+            flex: 6,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Row(
+                children: [
+                  menu('Reschedule', Icons.event, () => BulkActions.rescheduleItems(includeNoDate: true)),
+                  menu('Priority', Icons.flag_outlined, () => BulkActions.priorityItems(scheme)),
+                  LiveQuery<List<Project>>(
+                    id: 'projects',
+                    stream: s.projects.watchAll,
+                    builder: (context, projects) =>
+                        menu('Project', Icons.folder_outlined, () => BulkActions.projectItems(projects ?? const [])),
+                  ),
+                  TextButton.icon(
+                    onPressed: n == 0 ? null : () => apply('complete'),
+                    icon: const Icon(Icons.check_circle_outline, size: 20),
+                    label: const Text('Complete'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // List
+  // ---------------------------------------------------------------------------
+
   Widget _body(BuildContext context, Agenda agenda) {
     final scheme = Theme.of(context).colorScheme;
-    if (agenda.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.wb_sunny_outlined, size: 56, color: scheme.primary),
-            const SizedBox(height: 12),
-            Text('All clear for today', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text('Nothing due, overdue or ongoing.', style: TextStyle(color: scheme.outline)),
-            const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: () => QuickAdd.show(context, due: agenda.today),
-              icon: const Icon(Icons.add),
-              label: const Text('Add a task for today'),
-            ),
-          ],
-        ),
-      );
-    }
+    final s = AppScope.of(context);
     final rows = flattenAgenda(agenda, scheme: scheme, overdueCollapsed: _overdueCollapsed);
+    final today = agenda.today;
+    final pastFrom = today.addDays(-_pastDays);
+
+    final future = <Widget>[
+      if (agenda.isEmpty)
+        SliverToBoxAdapter(child: _emptyToday(context, agenda))
+      else
+        SliverList.builder(
+          itemCount: rows.length,
+          itemBuilder: (context, i) => switch (rows[i]) {
+            AgendaHeaderRow h => _header(context, h, agenda),
+            AgendaEntryRow e => AgendaEntryTile(
+              key: ValueKey(e.entry.key),
+              entry: e.entry,
+              today: today,
+              selected: _selecting ? _selected.contains(e.entry.key) : null,
+              onSelect: () => _toggle(e.entry),
+            ),
+          },
+        ),
+      const SliverToBoxAdapter(child: SizedBox(height: 96)),
+    ];
+
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 900),
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.only(bottom: 96),
-              sliver: SliverList.builder(
-                itemCount: rows.length,
-                itemBuilder: (context, i) => switch (rows[i]) {
-                  AgendaHeaderRow h => _header(context, h, agenda),
-                  AgendaEntryRow e => AgendaEntryTile(key: ValueKey(e.entry.key), entry: e.entry, today: agenda.today),
-                },
-              ),
-            ),
-          ],
+        child: LiveQuery<List<CompletedItem>>(
+          id: (pastFrom, today),
+          stream: () => s.tasks.watchCompleted(pastFrom, today.addDays(-1)),
+          builder: (context, history) {
+            final byDay = <int, List<CompletedItem>>{};
+            for (final h in history ?? const <CompletedItem>[]) {
+              byDay.putIfAbsent(h.day.epochDay, () => []).add(h);
+            }
+            final days = byDay.keys.toList()..sort((a, b) => b.compareTo(a)); // Most recent first.
+            final reachedStart = _earliest == null || pastFrom <= _earliest!;
+            return CustomScrollView(
+              center: _centerKey,
+              slivers: [
+                // Grows upwards from "Today": index 0 is the most recent day.
+                SliverList.builder(
+                  itemCount: days.length + 1,
+                  itemBuilder: (context, i) {
+                    if (i == days.length) {
+                      if (!reachedStart) {
+                        // Reached the top of what is loaded: load older days.
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) setState(() => _pastDays += 28);
+                        });
+                      }
+                      return _pastFooter(context, reachedStart, days.isEmpty);
+                    }
+                    final day = LocalDate.fromEpochDay(days[i]);
+                    return _pastDay(context, day, byDay[days[i]]!, today);
+                  },
+                ),
+                SliverToBoxAdapter(key: _centerKey, child: const SizedBox.shrink()),
+                ...future,
+              ],
+            );
+          },
         ),
+      ),
+    );
+  }
+
+  Widget _pastDay(BuildContext context, LocalDate day, List<CompletedItem> items, LocalDate today) {
+    final theme = Theme.of(context);
+    final isMonday = day.weekday == DateTime.monday;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 8, 2),
+          child: Row(
+            children: [
+              Text(
+                today.daysUntil(day) == -1 ? 'Yesterday · ${Fmt.longDate(day)}' : Fmt.longDate(day),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.outline,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${items.length} done',
+                style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline),
+              ),
+            ],
+          ),
+        ),
+        for (final h in items)
+          TaskTile(
+            key: ValueKey('h${h.item.task.id}_${h.occurrence?.date.epochDay}'),
+            item: h.item,
+            occurrence: h.occurrence,
+            today: today,
+            dense: true,
+          ),
+        if (isMonday) const Divider(height: 20, indent: 16, endIndent: 16),
+      ],
+    );
+  }
+
+  Widget _pastFooter(BuildContext context, bool reachedStart, bool empty) {
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Text(
+        reachedStart ? (empty ? 'No completed tasks yet' : 'Beginning of your history') : 'Loading earlier days…',
+        style: style,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _emptyToday(BuildContext context, Agenda agenda) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        children: [
+          Icon(Icons.wb_sunny_outlined, size: 56, color: scheme.primary),
+          const SizedBox(height: 12),
+          Text('All clear for today', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text('Nothing due, overdue or ongoing. Scroll up to see past days.', style: TextStyle(color: scheme.outline)),
+          const SizedBox(height: 16),
+          FilledButton.tonalIcon(
+            onPressed: () => QuickAdd.show(context, due: agenda.today),
+            icon: const Icon(Icons.add),
+            label: const Text('Add a task for today'),
+          ),
+        ],
       ),
     );
   }
@@ -128,6 +375,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   Widget _header(BuildContext context, AgendaHeaderRow h, Agenda agenda) {
     final theme = Theme.of(context);
     final color = h.color ?? (h.big ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant);
+    final isOverdue = h.collapsible;
     final text = Text(
       h.big ? h.title.toUpperCase() : h.title,
       style: (h.big ? theme.textTheme.titleSmall : theme.textTheme.labelLarge)?.copyWith(
@@ -146,13 +394,45 @@ class _AgendaScreenState extends State<AgendaScreen> {
             Text('${h.count}', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline)),
           ],
           const Spacer(),
-          if (h.collapsible) Icon(_overdueCollapsed ? Icons.expand_more : Icons.expand_less, size: 20, color: color),
+          if (isOverdue) _overdueMenu(context, agenda, color),
+          if (isOverdue) Icon(_overdueCollapsed ? Icons.expand_more : Icons.expand_less, size: 20, color: color),
           if (h.big && h.title == 'Today' && h.count == 0)
             Text('Nothing for today', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
         ],
       ),
     );
-    if (!h.collapsible) return row;
+    if (!isOverdue) return row;
     return InkWell(onTap: () => setState(() => _overdueCollapsed = !_overdueCollapsed), child: row);
+  }
+
+  /// "Overdue" header menu: act on every overdue task at once, or select.
+  Widget _overdueMenu(BuildContext context, Agenda agenda, Color color) {
+    final s = AppScope.of(context);
+    final overdue = agenda.overdue?.entries.where((e) => !e.isDone).toList() ?? const <AgendaEntry>[];
+    return PopupMenuButton<Object>(
+      tooltip: 'All overdue tasks…',
+      icon: Icon(Icons.more_horiz, color: color),
+      onSelected: (choice) async {
+        if (choice == 'select') {
+          setState(() {
+            _selecting = true;
+            _selected.addAll(overdue.map((e) => e.key));
+          });
+          return;
+        }
+        await BulkActions.applyMenuChoice(context, s, choice, overdue);
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem<Object>(enabled: false, height: 28, child: Text('Move all overdue to…')),
+        ...BulkActions.rescheduleItems(),
+        const PopupMenuDivider(),
+        const PopupMenuItem<Object>(
+          value: 'select',
+          child: Row(
+            children: [Icon(Icons.checklist_rtl, size: 18), SizedBox(width: 10), Text('Select overdue tasks…')],
+          ),
+        ),
+      ],
+    );
   }
 }

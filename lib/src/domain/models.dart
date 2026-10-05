@@ -211,3 +211,20 @@ class TaskListItem {
 }
 
 DateTime? millisToLocal(int? v) => _ms(v);
+
+/// One little square of the mini calendar: a task (or occurrence) on a day.
+class DayCell {
+  const DayCell({required this.taskId, required this.title, this.projectColor, this.done = false});
+  final int taskId;
+  final String title;
+  final int? projectColor;
+  final bool done;
+}
+
+/// Something completed on a past day (agenda history / weekly review).
+class CompletedItem {
+  const CompletedItem({required this.item, required this.day, this.occurrence});
+  final TaskListItem item;
+  final LocalDate day;
+  final Occurrence? occurrence;
+}

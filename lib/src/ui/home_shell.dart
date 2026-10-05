@@ -7,6 +7,7 @@ import 'editor/quick_add.dart';
 import 'projects/projects_screen.dart';
 import 'settings/settings_screen.dart';
 import 'tasks/tasks_screen.dart';
+import 'widgets/project_drop_bar.dart';
 
 /// Adaptive navigation: bottom bar on phones, rail on wide windows.
 /// Tabs are kept alive (IndexedStack) so switching is instant.
@@ -116,7 +117,15 @@ class HomeShellState extends State<HomeShell> {
                   ],
                 ),
                 const VerticalDivider(width: 1),
-                Expanded(child: body),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      body,
+                      // Shown only while a task is dragged (desktop).
+                      const Positioned(left: 0, right: 0, bottom: 0, child: ProjectDropBar()),
+                    ],
+                  ),
+                ),
               ],
             ),
           )
