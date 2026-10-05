@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
@@ -10,6 +11,7 @@ import '../../app/app_services.dart';
 import '../../core/local_date.dart';
 import '../../domain/agenda.dart';
 import '../../domain/enums.dart';
+import '../../domain/models.dart';
 import '../../platform/desktop/desktop_integration.dart';
 import '../../platform/desktop/instance_ipc.dart';
 import '../../platform/desktop/native_window.dart';
@@ -245,6 +247,8 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
                         : _OverlayList(agenda: agenda, onOpen: platform.openInMain),
                   ),
                 ),
+                const Divider(height: 1),
+                const _OverlayQuickAdd(),
               ],
             ),
           ),
@@ -545,5 +549,77 @@ class _OverlayList extends StatelessWidget {
       ],
     );
     if (choice != null && context.mounted) await BulkActions.applyMenuChoice(context, s, choice, overdue);
+  }
+}
+
+/// Discreet one-line task entry at the bottom of the overlay: type a title,
+/// press Enter, the task is created for today. Esc clears the field.
+class _OverlayQuickAdd extends StatefulWidget {
+  const _OverlayQuickAdd();
+  @override
+  State<_OverlayQuickAdd> createState() => _OverlayQuickAddState();
+}
+
+class _OverlayQuickAddState extends State<_OverlayQuickAdd> {
+  final _ctrl = TextEditingController();
+  final _focus = FocusNode();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final title = _ctrl.text.trim();
+    if (title.isEmpty || _busy) return;
+    _busy = true;
+    final s = AppScope.of(context);
+    try {
+      await s.tasks.createTask(TaskDraft(title: title, dueDate: s.clock.today()));
+      _ctrl.clear();
+    } finally {
+      _busy = false;
+    }
+    if (mounted) _focus.requestFocus(); // Ready for the next one.
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final style = theme.textTheme.bodySmall;
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          _ctrl.clear();
+          _focus.unfocus();
+        },
+      },
+      child: SizedBox(
+        height: 30,
+        child: TextField(
+          controller: _ctrl,
+          focusNode: _focus,
+          style: style,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            hintText: 'Add a task for today…',
+            hintStyle: style?.copyWith(color: scheme.outline),
+            prefixIcon: Icon(Icons.add, size: 14, color: scheme.outline),
+            prefixIconConstraints: const BoxConstraints.tightFor(width: 30, height: 30),
+            contentPadding: const EdgeInsets.only(right: 10, top: 8, bottom: 8),
+          ),
+        ),
+      ),
+    );
   }
 }
