@@ -90,7 +90,12 @@ class AgendaEntryRow extends AgendaRow {
 List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overdueCollapsed = false}) {
   final rows = <AgendaRow>[];
   final today = a.todaySections.toList();
-  rows.add(AgendaHeaderRow('Today', count: a.todayCount, big: true));
+  // Dropping on the "Today" title plans the task for today, even when the
+  // day is still empty.
+  final todayDrop =
+      today.where((s) => s.kind == AgendaSectionKind.today).firstOrNull ??
+      const AgendaSection(AgendaSectionKind.today, []);
+  rows.add(AgendaHeaderRow('Today', count: a.todayCount, big: true, section: todayDrop));
   for (final s in today) {
     rows.add(
       AgendaHeaderRow(

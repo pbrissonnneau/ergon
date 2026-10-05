@@ -13,6 +13,7 @@ import '../widgets/live_query.dart';
 import '../widgets/task_tile.dart';
 import 'agenda_drop.dart';
 import 'agenda_view.dart';
+import 'backlog.dart';
 import 'week_strip.dart';
 
 /// Main screen: "What do I need to deal with today?"
@@ -28,6 +29,8 @@ class AgendaScreen extends StatefulWidget {
 
 class _AgendaScreenState extends State<AgendaScreen> {
   bool _overdueCollapsed = false;
+  bool _backlogCollapsed = false;
+  static const _backlogKey = 'agenda.backlog';
 
   /// Keys of selected entries (multi-select); empty = normal mode.
   final _selected = <String>{};
@@ -138,6 +141,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
               ListenableBuilder(
                 listenable: s.settings,
+                builder: (context, _) {
+                  final shown = s.settings.raw(_backlogKey) != '0';
+                  return IconButton(
+                    tooltip: shown ? 'Hide backlog' : 'Show backlog (tasks without a date)',
+                    isSelected: shown,
+                    icon: const Icon(Icons.inbox_outlined),
+                    selectedIcon: const Icon(Icons.inbox),
+                    onPressed: () => s.settings.setRaw(_backlogKey, shown ? '0' : '1'),
+                  );
+                },
+              ),
+              ListenableBuilder(
+                listenable: s.settings,
                 builder: (context, _) => PopupMenuButton<int>(
                   tooltip: 'Show upcoming days',
                   icon: const Icon(Icons.date_range),
@@ -155,7 +171,27 @@ class _AgendaScreenState extends State<AgendaScreen> {
               const SizedBox(width: 4),
             ],
           ),
-          body: agenda == null ? const SizedBox.shrink() : _body(context, agenda),
+          body: agenda == null
+              ? const SizedBox.shrink()
+              : ListenableBuilder(
+                  listenable: s.settings,
+                  builder: (context, _) => LayoutBuilder(
+                    builder: (context, c) {
+                      final show = s.settings.raw(_backlogKey) != '0';
+                      // Wide: backlog as a side panel; narrow: a section below the agenda.
+                      final side = show && c.maxWidth >= 900;
+                      final list = _body(context, agenda, backlogInList: show && !side);
+                      if (!side) return list;
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: list),
+                          const SizedBox(width: 320, child: Backlog()),
+                        ],
+                      );
+                    },
+                  ),
+                ),
           bottomNavigationBar: _selecting ? _selectionBar(context) : null,
         );
       },
@@ -230,7 +266,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   // List
   // ---------------------------------------------------------------------------
 
-  Widget _body(BuildContext context, Agenda agenda) {
+  Widget _body(BuildContext context, Agenda agenda, {required bool backlogInList}) {
     final scheme = Theme.of(context).colorScheme;
     final s = AppScope.of(context);
     final rows = flattenAgenda(agenda, scheme: scheme, overdueCollapsed: _overdueCollapsed);
@@ -260,6 +296,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
             ),
           },
+        ),
+      if (backlogInList)
+        SliverToBoxAdapter(
+          child: Backlog(
+            asSection: true,
+            collapsed: _backlogCollapsed,
+            onToggle: () => setState(() => _backlogCollapsed = !_backlogCollapsed),
+          ),
         ),
       const SliverToBoxAdapter(child: SizedBox(height: 96)),
     ];
