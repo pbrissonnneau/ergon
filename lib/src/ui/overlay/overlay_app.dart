@@ -112,7 +112,10 @@ class OverlayIntegration extends DesktopIntegration {
   Future<void> openInMain(int taskId) =>
       _toMain(IpcCommand(IpcCommand.openTask, {'taskId': taskId}), ['--open-task=$taskId']);
   Future<void> showMain() => _toMain(const IpcCommand(IpcCommand.show), const []);
-  Future<void> quickAddInMain() => _toMain(const IpcCommand(IpcCommand.quickAdd), const ['--new-task']);
+  Future<void> quickAddInMain({LocalDate? due}) => _toMain(
+    IpcCommand(IpcCommand.quickAdd, {if (due != null) 'due': due.epochDay}),
+    ['--new-task', if (due != null) '--due=${due.epochDay}'],
+  );
 
   @override
   Future<void> dispose() async {
@@ -214,7 +217,7 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
                   onTop: _onTop,
                   onToggleTop: () => s.settings.overlayAlwaysOnTop = !_onTop,
                   onOpenMain: platform.showMain,
-                  onAdd: platform.quickAddInMain,
+                  onAdd: () => platform.quickAddInMain(),
                   onClose: () async {
                     if (_closeOnDisable) s.settings.overlayEnabled = false;
                     await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -226,7 +229,12 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
                   padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: WeekStrip(compact: true, square: 24, onOpenTask: platform.openInMain),
+                    child: WeekStrip(
+                      compact: true,
+                      square: 24,
+                      onOpenTask: platform.openInMain,
+                      onNewTask: (day) => platform.quickAddInMain(due: day),
+                    ),
                   ),
                 ),
                 Expanded(
@@ -368,7 +376,21 @@ class _OverlayList extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  // Done button: the circle turns into a green check (click again to undo).
+                  InkResponse(
+                    radius: 14,
+                    onTap: () => _toggleDone(context, e),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Icon(
+                        e.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+                        size: 18,
+                        color: e.isDone
+                            ? AppTheme.statusColor(TaskStatus.completed, scheme)
+                            : AppTheme.priorityColor(e.task.priority, scheme),
+                      ),
+                    ),
+                  ),
                   if (e.task.priority.code >= TaskPriority.high.code && !e.isDone)
                     Icon(
                       AppTheme.priorityIcon(e.task.priority),
@@ -395,7 +417,7 @@ class _OverlayList extends StatelessWidget {
                       MinuteOfDay.format(e.minute!),
                       style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline),
                     ),
-                  if (e.status != TaskStatus.notStarted)
+                  if (e.status != TaskStatus.notStarted && !e.isDone)
                     Padding(
                       padding: const EdgeInsets.only(left: 4),
                       child: Icon(
@@ -448,6 +470,15 @@ class _OverlayList extends StatelessWidget {
   RelativeRect _at(BuildContext context, Offset p) {
     final size = MediaQuery.sizeOf(context);
     return RelativeRect.fromLTRB(p.dx, p.dy, size.width - p.dx, size.height - p.dy);
+  }
+
+  Future<void> _toggleDone(BuildContext context, AgendaEntry e) async {
+    final s = AppScope.of(context);
+    final next = e.isDone ? TaskStatus.notStarted : TaskStatus.completed;
+    final occ = e.occurrence;
+    occ != null
+        ? await s.tasks.setOccurrenceStatus(e.task.id, occ.date, next)
+        : await s.tasks.setStatus(e.task.id, next);
   }
 
   /// Right-click on a task: complete, reschedule, priority, open.

@@ -17,7 +17,7 @@ class AndroidIntegration extends PlatformIntegration {
   static const channel = MethodChannel('app.ergon/platform');
 
   final _open = StreamController<int>.broadcast();
-  final _add = StreamController<void>.broadcast();
+  final _add = StreamController<LocalDate?>.broadcast();
   String? _lastPublished;
 
   @override
@@ -63,7 +63,7 @@ class AndroidIntegration extends PlatformIntegration {
   @override
   Stream<int> get openTaskRequests => _open.stream;
   @override
-  Stream<void> get quickAddRequests => _add.stream;
+  Stream<LocalDate?> get quickAddRequests => _add.stream;
 
   @override
   Future<int?> initialTaskToOpen() async {

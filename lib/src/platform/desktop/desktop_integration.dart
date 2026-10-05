@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../core/local_date.dart';
 import '../../services/notifications/notification_gateway.dart';
 import '../platform_integration.dart';
 import 'autostart.dart';
@@ -24,9 +25,10 @@ class DesktopIntegration extends PlatformIntegration {
   InstanceChannel? mainChannel;
   int? launchTaskId;
   bool launchQuickAdd = false;
+  LocalDate? launchQuickAddDue;
 
   final _open = StreamController<int>.broadcast();
-  final _add = StreamController<void>.broadcast();
+  final _add = StreamController<LocalDate?>.broadcast();
   StreamSubscription<IpcCommand>? _sub;
 
   @override
@@ -80,19 +82,20 @@ class DesktopIntegration extends PlatformIntegration {
           if (id is int) _open.add(id);
         case IpcCommand.quickAdd:
           await bringToFront();
-          _add.add(null);
+          final due = cmd.args['due'];
+          _add.add(due is int ? LocalDate.fromEpochDay(due) : null);
         case IpcCommand.show:
           await bringToFront();
       }
     });
     await ch.listen();
-    if (launchQuickAdd) _add.add(null);
+    if (launchQuickAdd) _add.add(launchQuickAddDue);
   }
 
   @override
   Stream<int> get openTaskRequests => _open.stream;
   @override
-  Stream<void> get quickAddRequests => _add.stream;
+  Stream<LocalDate?> get quickAddRequests => _add.stream;
 
   @override
   Future<int?> initialTaskToOpen() async => launchTaskId;

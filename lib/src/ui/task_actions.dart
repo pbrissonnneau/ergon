@@ -14,28 +14,13 @@ abstract final class TaskActions {
   static Future<void> open(BuildContext context, int taskId, {bool isNew = false}) =>
       Navigator.of(context).push(TaskEditorPage.route(taskId, isNew: isNew));
 
-  /// Toggles completion of a task or of one occurrence, with Undo.
+  /// Toggles completion of a task or of one occurrence. The tick turning green
+  /// is the feedback (no notification).
   static Future<void> toggleComplete(BuildContext context, Task task, {Occurrence? occurrence}) async {
     final s = AppScope.of(context);
-    final messenger = ScaffoldMessenger.maybeOf(context);
     final current = occurrence?.status ?? task.status;
     final next = current == TaskStatus.completed ? TaskStatus.notStarted : TaskStatus.completed;
     await setStatus(s, task, next, occurrence: occurrence);
-    if (next == TaskStatus.completed && messenger != null) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Completed “${task.title}”', maxLines: 1, overflow: TextOverflow.ellipsis),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () => setStatus(s, task, current, occurrence: occurrence),
-            ),
-          ),
-        );
-    }
   }
 
   static Future<void> setStatus(AppServices s, Task task, TaskStatus status, {Occurrence? occurrence}) {
@@ -45,18 +30,7 @@ abstract final class TaskActions {
 
   static Future<void> snooze(BuildContext context, Task task, Duration d, {LocalDate? occurrenceDate}) async {
     final s = AppScope.of(context);
-    final messenger = ScaffoldMessenger.maybeOf(context);
     await s.reminders.snooze(task.id, occurrenceDate: occurrenceDate, duration: d);
-    final at = s.clock.now().add(d);
-    messenger?.showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          'Reminder snoozed until ${MinuteOfDay.format(MinuteOfDay.fromDateTime(at))}'
-          '${LocalDate.fromDateTime(at) != s.clock.today() ? ' (${LocalDate.fromDateTime(at)})' : ''}',
-        ),
-      ),
-    );
   }
 
   static Future<bool> confirmDelete(BuildContext context, Task task) async {

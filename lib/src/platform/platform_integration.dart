@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../core/local_date.dart';
 import '../domain/agenda.dart';
 import '../services/notifications/local_notifications_gateway.dart';
 import '../services/notifications/notification_gateway.dart';
@@ -38,8 +39,9 @@ abstract class PlatformIntegration {
   /// Task ids the user asked to open from outside (widget, overlay, CLI...).
   Stream<int> get openTaskRequests;
 
-  /// "New task" requests from outside (e.g. overlay's + button).
-  Stream<void> get quickAddRequests;
+  /// "New task" requests from outside (overlay, shortcut, widget), with an
+  /// optional due date (e.g. double-click on a day in the overlay).
+  Stream<LocalDate?> get quickAddRequests;
 
   /// Task to open on cold start, if the app was launched for one.
   Future<int?> initialTaskToOpen();
@@ -75,7 +77,7 @@ class HeadlessIntegration extends PlatformIntegration {
   HeadlessIntegration({NotificationGateway? gateway}) : _gateway = gateway;
   final NotificationGateway? _gateway;
   final _open = StreamController<int>.broadcast();
-  final _add = StreamController<void>.broadcast();
+  final _add = StreamController<LocalDate?>.broadcast();
 
   @override
   bool get isDesktop => false;
@@ -90,7 +92,7 @@ class HeadlessIntegration extends PlatformIntegration {
   @override
   Stream<int> get openTaskRequests => _open.stream;
   @override
-  Stream<void> get quickAddRequests => _add.stream;
+  Stream<LocalDate?> get quickAddRequests => _add.stream;
   @override
   Future<int?> initialTaskToOpen() async => null;
 }

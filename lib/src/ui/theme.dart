@@ -33,8 +33,10 @@ abstract final class AppTheme {
     );
   }
 
-  /// A task's project colour (neutral when it has no project).
-  static Color projectColor(int? color, ColorScheme s) => color == null ? s.outlineVariant : Color(color);
+  /// A task's project colour. Tasks without a project get a mid grey that
+  /// stays distinct from the light grey backgrounds (calendar squares).
+  static Color projectColor(int? color, ColorScheme s) =>
+      color == null ? Color.alphaBlend(s.onSurfaceVariant.withValues(alpha: 0.75), s.surface) : Color(color);
 
   static Color priorityColor(TaskPriority p, ColorScheme s) => switch (p) {
     TaskPriority.low => s.outline,

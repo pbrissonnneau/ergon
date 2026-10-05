@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/app/app_services.dart';
+import 'src/core/local_date.dart';
 import 'src/core/startup_trace.dart';
 import 'src/app/ergon_app.dart';
 import 'src/data/database_opener.dart';
@@ -39,6 +40,7 @@ Future<void> main(List<String> args) async {
   }
 
   final openTask = _intArg(args, '--open-task=');
+  final dueArg = _intArg(args, '--due='); // epoch day, with --new-task
   PlatformIntegration platform = PlatformIntegration.forCurrentPlatform(dataDir: dataDir);
 
   if (platform is DesktopIntegration) {
@@ -57,7 +59,7 @@ Future<void> main(List<String> args) async {
         openTask != null
             ? IpcCommand(IpcCommand.openTask, {'taskId': openTask})
             : args.contains('--new-task')
-            ? const IpcCommand(IpcCommand.quickAdd)
+            ? IpcCommand(IpcCommand.quickAdd, {'due': ?dueArg})
             : const IpcCommand(IpcCommand.show),
       );
       exit(0);
@@ -65,7 +67,8 @@ Future<void> main(List<String> args) async {
     platform
       ..mainChannel = channel
       ..launchTaskId = openTask
-      ..launchQuickAdd = args.contains('--new-task');
+      ..launchQuickAdd = args.contains('--new-task')
+      ..launchQuickAddDue = dueArg == null ? null : LocalDate.fromEpochDay(dueArg);
   }
 
   // Android: notification actions tapped while the app is not running.

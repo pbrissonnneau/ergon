@@ -159,13 +159,11 @@ abstract final class BulkActions {
     Object? choice,
     List<AgendaEntry> entries,
   ) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    String? message;
     switch (choice) {
       case RescheduleTarget t:
         final (cancelled, date) = await resolve(context, t, s.clock.today());
         if (cancelled) return;
-        message = await reschedule(s, entries, date);
+        await reschedule(s, entries, date);
       case TaskPriority p:
         await setPriority(s, entries, p);
       case ('project', int id):
@@ -174,9 +172,6 @@ abstract final class BulkActions {
         await complete(s, entries);
       default:
         return;
-    }
-    if (message != null && message.isNotEmpty) {
-      messenger?.showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
     }
   }
 }

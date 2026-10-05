@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/app_services.dart';
+import '../core/local_date.dart';
 import 'agenda/agenda_screen.dart';
 import 'editor/quick_add.dart';
 import 'projects/projects_screen.dart';
@@ -55,12 +56,12 @@ class HomeShellState extends State<HomeShell> {
   void projectOpened(int id) => _openProjects.add(id);
   void projectClosed(int id) => _openProjects.remove(id);
 
-  void quickAdd() {
+  void quickAdd({LocalDate? due}) {
     final ctx = _navigators[_index].currentContext ?? context;
     final project = _index == 2 && _openProjects.isNotEmpty ? _openProjects.last : null;
     QuickAdd.show(
       ctx,
-      due: _index == 0 ? AppScope.of(context).today.value : null,
+      due: due ?? (_index == 0 ? AppScope.of(context).today.value : null),
       projectId: project != null && project >= 0 ? project : null,
     );
   }

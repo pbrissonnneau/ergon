@@ -74,9 +74,6 @@ class ProjectDropBar extends StatelessWidget {
             return;
           }
           await s.tasks.moveToProject(task.id, projectId);
-          messenger?.showSnackBar(
-            SnackBar(behavior: SnackBarBehavior.floating, content: Text('“${task.title}” moved to $name')),
-          );
         },
         builder: (context, candidates, _) {
           final hover = candidates.isNotEmpty;
