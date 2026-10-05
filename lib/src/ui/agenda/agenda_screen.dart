@@ -11,6 +11,7 @@ import '../editor/quick_add.dart';
 import '../formatting.dart';
 import '../widgets/live_query.dart';
 import '../widgets/task_tile.dart';
+import 'agenda_drop.dart';
 import 'agenda_view.dart';
 import 'week_strip.dart';
 
@@ -243,13 +244,20 @@ class _AgendaScreenState extends State<AgendaScreen> {
         SliverList.builder(
           itemCount: rows.length,
           itemBuilder: (context, i) => switch (rows[i]) {
-            AgendaHeaderRow h => _header(context, h, agenda),
-            AgendaEntryRow e => AgendaEntryTile(
-              key: ValueKey(e.entry.key),
-              entry: e.entry,
-              today: today,
-              selected: _selecting ? _selected.contains(e.entry.key) : null,
-              onSelect: () => _toggle(e.entry),
+            AgendaHeaderRow h =>
+              h.section == null
+                  ? _header(context, h, agenda)
+                  : AgendaDropSlot(section: h.section!, today: today, child: _header(context, h, agenda)),
+            AgendaEntryRow e => _dropSlot(
+              e,
+              today,
+              AgendaEntryTile(
+                key: ValueKey(e.entry.key),
+                entry: e.entry,
+                today: today,
+                selected: _selecting ? _selected.contains(e.entry.key) : null,
+                onSelect: () => _toggle(e.entry),
+              ),
             ),
           },
         ),
@@ -297,6 +305,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
           },
         ),
       ),
+    );
+  }
+
+  /// Agenda row accepting dragged tasks (reorder / move to this day).
+  Widget _dropSlot(AgendaEntryRow e, LocalDate today, Widget tile) {
+    final entries = e.section.entries;
+    final i = entries.indexWhere((x) => x.key == e.entry.key);
+    return AgendaDropSlot(
+      section: e.section,
+      today: today,
+      thisKey: e.entry.key,
+      nextKey: i >= 0 && i + 1 < entries.length ? entries[i + 1].key : null,
+      child: tile,
     );
   }
 

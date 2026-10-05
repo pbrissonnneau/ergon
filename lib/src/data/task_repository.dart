@@ -531,7 +531,8 @@ class TaskRepository {
     final list = ids.toList();
     if (list.isEmpty) return;
     await (db.update(db.tasks)..where((t) => t.id.isIn(list) & t.type.isNotValue(TaskType.recurring.code))).write(
-      TasksCompanion(dueDate: Value(date?.epochDay), updatedAt: Value(_now)),
+      // A new day starts without manual order (sorted by priority/time there).
+      TasksCompanion(dueDate: Value(date?.epochDay), dayOrder: const Value(0), updatedAt: Value(_now)),
     );
     if (date == null) {
       await (db.update(db.tasks)..where((t) => t.id.isIn(list))).write(const TasksCompanion(dueMinute: Value(null)));
@@ -563,6 +564,13 @@ class TaskRepository {
     for (final id in ids) {
       final t = await (db.select(db.tasks)..where((x) => x.id.equals(id))).getSingleOrNull();
       if (t != null && t.parentId == null) await moveToProject(id, projectId);
+    }
+  });
+
+  /// Persists a manual agenda order: [taskIds] in display order.
+  Future<void> setDayOrder(List<int> taskIds) => db.batch((b) {
+    for (var i = 0; i < taskIds.length; i++) {
+      b.update(db.tasks, TasksCompanion(dayOrder: Value(i + 1)), where: (t) => t.id.equals(taskIds[i]));
     }
   });
 

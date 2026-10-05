@@ -33,6 +33,7 @@ class Task {
     this.dueMinute,
     this.recurrence,
     this.position = 0,
+    this.dayOrder = 0,
     required this.createdAt,
     required this.updatedAt,
     this.completedAt,
@@ -54,6 +55,9 @@ class Task {
   final int? dueMinute;
   final RecurrenceRule? recurrence;
   final int position;
+
+  /// Manual order within an agenda day (0 = none).
+  final int dayOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? completedAt;

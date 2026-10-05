@@ -501,6 +501,16 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskRow> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _dayOrderMeta = const VerificationMeta('dayOrder');
+  @override
+  late final GeneratedColumn<int> dayOrder = GeneratedColumn<int>(
+    'day_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -520,6 +530,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskRow> {
     updatedAt,
     completedAt,
     archivedAt,
+    dayOrder,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -593,6 +604,9 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskRow> {
     if (data.containsKey('archived_at')) {
       context.handle(_archivedAtMeta, archivedAt.isAcceptableOrUnknown(data['archived_at']!, _archivedAtMeta));
     }
+    if (data.containsKey('day_order')) {
+      context.handle(_dayOrderMeta, dayOrder.isAcceptableOrUnknown(data['day_order']!, _dayOrderMeta));
+    }
     return context;
   }
 
@@ -622,6 +636,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskRow> {
       updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       completedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}completed_at']),
       archivedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}archived_at']),
+      dayOrder: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}day_order'])!,
     );
   }
 
@@ -656,6 +671,10 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
   /// When a closed task was removed from the agenda (by the user, or
   /// implicitly the day after completion). Added in schema v2.
   final int? archivedAt;
+
+  /// Manual order within an agenda day (drag and drop); 0 = not ordered,
+  /// which sorts after ordered tasks by priority/time. Added in schema v3.
+  final int dayOrder;
   const TaskRow({
     required this.id,
     this.parentId,
@@ -674,6 +693,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     required this.updatedAt,
     this.completedAt,
     this.archivedAt,
+    required this.dayOrder,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -711,6 +731,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     if (!nullToAbsent || archivedAt != null) {
       map['archived_at'] = Variable<int>(archivedAt);
     }
+    map['day_order'] = Variable<int>(dayOrder);
     return map;
   }
 
@@ -735,6 +756,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       updatedAt: Value(updatedAt),
       completedAt: completedAt == null && nullToAbsent ? const Value.absent() : Value(completedAt),
       archivedAt: archivedAt == null && nullToAbsent ? const Value.absent() : Value(archivedAt),
+      dayOrder: Value(dayOrder),
     );
   }
 
@@ -758,6 +780,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       completedAt: serializer.fromJson<int?>(json['completedAt']),
       archivedAt: serializer.fromJson<int?>(json['archivedAt']),
+      dayOrder: serializer.fromJson<int>(json['dayOrder']),
     );
   }
   @override
@@ -781,6 +804,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       'updatedAt': serializer.toJson<int>(updatedAt),
       'completedAt': serializer.toJson<int?>(completedAt),
       'archivedAt': serializer.toJson<int?>(archivedAt),
+      'dayOrder': serializer.toJson<int>(dayOrder),
     };
   }
 
@@ -802,6 +826,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     int? updatedAt,
     Value<int?> completedAt = const Value.absent(),
     Value<int?> archivedAt = const Value.absent(),
+    int? dayOrder,
   }) => TaskRow(
     id: id ?? this.id,
     parentId: parentId.present ? parentId.value : this.parentId,
@@ -822,6 +847,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
     archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
+    dayOrder: dayOrder ?? this.dayOrder,
   );
   TaskRow copyWithCompanion(TasksCompanion data) {
     return TaskRow(
@@ -844,6 +870,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       completedAt: data.completedAt.present ? data.completedAt.value : this.completedAt,
       archivedAt: data.archivedAt.present ? data.archivedAt.value : this.archivedAt,
+      dayOrder: data.dayOrder.present ? data.dayOrder.value : this.dayOrder,
     );
   }
 
@@ -866,7 +893,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('completedAt: $completedAt, ')
-          ..write('archivedAt: $archivedAt')
+          ..write('archivedAt: $archivedAt, ')
+          ..write('dayOrder: $dayOrder')
           ..write(')'))
         .toString();
   }
@@ -890,6 +918,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     updatedAt,
     completedAt,
     archivedAt,
+    dayOrder,
   );
   @override
   bool operator ==(Object other) =>
@@ -911,7 +940,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.completedAt == this.completedAt &&
-          other.archivedAt == this.archivedAt);
+          other.archivedAt == this.archivedAt &&
+          other.dayOrder == this.dayOrder);
 }
 
 class TasksCompanion extends UpdateCompanion<TaskRow> {
@@ -932,6 +962,7 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
   final Value<int> updatedAt;
   final Value<int?> completedAt;
   final Value<int?> archivedAt;
+  final Value<int> dayOrder;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.parentId = const Value.absent(),
@@ -950,6 +981,7 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
     this.updatedAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.archivedAt = const Value.absent(),
+    this.dayOrder = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -969,6 +1001,7 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
     required int updatedAt,
     this.completedAt = const Value.absent(),
     this.archivedAt = const Value.absent(),
+    this.dayOrder = const Value.absent(),
   }) : title = Value(title),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
@@ -990,6 +1023,7 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
     Expression<int>? updatedAt,
     Expression<int>? completedAt,
     Expression<int>? archivedAt,
+    Expression<int>? dayOrder,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1009,6 +1043,7 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (completedAt != null) 'completed_at': completedAt,
       if (archivedAt != null) 'archived_at': archivedAt,
+      if (dayOrder != null) 'day_order': dayOrder,
     });
   }
 
@@ -1030,6 +1065,7 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
     Value<int>? updatedAt,
     Value<int?>? completedAt,
     Value<int?>? archivedAt,
+    Value<int>? dayOrder,
   }) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -1049,6 +1085,7 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       completedAt: completedAt ?? this.completedAt,
       archivedAt: archivedAt ?? this.archivedAt,
+      dayOrder: dayOrder ?? this.dayOrder,
     );
   }
 
@@ -1106,6 +1143,9 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
     if (archivedAt.present) {
       map['archived_at'] = Variable<int>(archivedAt.value);
     }
+    if (dayOrder.present) {
+      map['day_order'] = Variable<int>(dayOrder.value);
+    }
     return map;
   }
 
@@ -1128,7 +1168,8 @@ class TasksCompanion extends UpdateCompanion<TaskRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('completedAt: $completedAt, ')
-          ..write('archivedAt: $archivedAt')
+          ..write('archivedAt: $archivedAt, ')
+          ..write('dayOrder: $dayOrder')
           ..write(')'))
         .toString();
   }
@@ -3180,6 +3221,7 @@ typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
   required int updatedAt,
   Value<int?> completedAt,
   Value<int?> archivedAt,
+  Value<int> dayOrder,
 });
 typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<int> id,
@@ -3199,6 +3241,7 @@ typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<int> updatedAt,
   Value<int?> completedAt,
   Value<int?> archivedAt,
+  Value<int> dayOrder,
 });
 
 final class $$TasksTableReferences extends BaseReferences<_$AppDatabase, $TasksTable, TaskRow> {
@@ -3303,6 +3346,9 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<int> get archivedAt =>
       $composableBuilder(column: $table.archivedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get dayOrder =>
+      $composableBuilder(column: $table.dayOrder, builder: (column) => ColumnFilters(column));
 
   $$TasksTableFilterComposer get parentId {
     final $$TasksTableFilterComposer composer = $composerBuilder(
@@ -3429,6 +3475,9 @@ class $$TasksTableOrderingComposer extends Composer<_$AppDatabase, $TasksTable> 
   ColumnOrderings<int> get archivedAt =>
       $composableBuilder(column: $table.archivedAt, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get dayOrder =>
+      $composableBuilder(column: $table.dayOrder, builder: (column) => ColumnOrderings(column));
+
   $$TasksTableOrderingComposer get parentId {
     final $$TasksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -3505,6 +3554,8 @@ class $$TasksTableAnnotationComposer extends Composer<_$AppDatabase, $TasksTable
   GeneratedColumn<int> get completedAt => $composableBuilder(column: $table.completedAt, builder: (column) => column);
 
   GeneratedColumn<int> get archivedAt => $composableBuilder(column: $table.archivedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get dayOrder => $composableBuilder(column: $table.dayOrder, builder: (column) => column);
 
   $$TasksTableAnnotationComposer get parentId {
     final $$TasksTableAnnotationComposer composer = $composerBuilder(
@@ -3621,6 +3672,7 @@ class $$TasksTableTableManager
                 Value<int> updatedAt = const Value.absent(),
                 Value<int?> completedAt = const Value.absent(),
                 Value<int?> archivedAt = const Value.absent(),
+                Value<int> dayOrder = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 parentId: parentId,
@@ -3639,6 +3691,7 @@ class $$TasksTableTableManager
                 updatedAt: updatedAt,
                 completedAt: completedAt,
                 archivedAt: archivedAt,
+                dayOrder: dayOrder,
               ),
           createCompanionCallback:
               ({
@@ -3659,6 +3712,7 @@ class $$TasksTableTableManager
                 required int updatedAt,
                 Value<int?> completedAt = const Value.absent(),
                 Value<int?> archivedAt = const Value.absent(),
+                Value<int> dayOrder = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 parentId: parentId,
@@ -3677,6 +3731,7 @@ class $$TasksTableTableManager
                 updatedAt: updatedAt,
                 completedAt: completedAt,
                 archivedAt: archivedAt,
+                dayOrder: dayOrder,
               ),
           withReferenceMapper: (p0) =>
               p0.map((e) => (e.readTable<$TasksTable, TaskRow>(table), $$TasksTableReferences(db, table, e))).toList(),

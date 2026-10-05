@@ -18,15 +18,37 @@ abstract final class TaskDrag {
 /// Makes [child] draggable with the mouse on desktop. Touch keeps long-press
 /// for the quick-actions menu, which offers the same moves.
 class DraggableTask extends StatelessWidget {
-  const DraggableTask({super.key, required this.data, required this.enabled, required this.child});
+  const DraggableTask({
+    super.key,
+    required this.data,
+    required this.enabled,
+    required this.child,
+    this.touchLongPress = false,
+  });
   final TaskDragData data;
   final bool enabled;
   final Widget child;
 
+  /// Touch screens: start dragging after a long press (used where long press
+  /// has no other meaning, e.g. project swimlanes).
+  final bool touchLongPress;
+
   @override
   Widget build(BuildContext context) {
     if (!enabled) return child;
-    final scheme = Theme.of(context).colorScheme;
+    if (touchLongPress) {
+      return LongPressDraggable<TaskDragData>(
+        data: data,
+        dragAnchorStrategy: pointerDragAnchorStrategy,
+        rootOverlay: true,
+        onDragStarted: () => TaskDrag.active.value = true,
+        onDragEnd: (_) => TaskDrag.active.value = false,
+        onDraggableCanceled: (_, _) => TaskDrag.active.value = false,
+        feedback: _feedback(context),
+        childWhenDragging: Opacity(opacity: 0.4, child: child),
+        child: child,
+      );
+    }
     return Draggable<TaskDragData>(
       data: data,
       dragAnchorStrategy: pointerDragAnchorStrategy,
@@ -35,25 +57,30 @@ class DraggableTask extends StatelessWidget {
       onDragStarted: () => TaskDrag.active.value = true,
       onDragEnd: (_) => TaskDrag.active.value = false,
       onDraggableCanceled: (_, _) => TaskDrag.active.value = false,
-      feedback: Material(
-        elevation: 6,
-        color: scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
-            child: Text(
-              data.task.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: scheme.onSecondaryContainer),
-            ),
+      feedback: _feedback(context),
+      childWhenDragging: Opacity(opacity: 0.4, child: child),
+      child: child,
+    );
+  }
+
+  Widget _feedback(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      elevation: 6,
+      color: scheme.secondaryContainer,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: Text(
+            data.task.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: scheme.onSecondaryContainer),
           ),
         ),
       ),
-      childWhenDragging: Opacity(opacity: 0.4, child: child),
-      child: child,
     );
   }
 }

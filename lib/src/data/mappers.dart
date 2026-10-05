@@ -23,6 +23,7 @@ extension TaskRowMapping on TaskRow {
     dueMinute: dueMinute,
     recurrence: _safeRule(recurrence),
     position: position,
+    dayOrder: dayOrder,
     createdAt: _utc(createdAt),
     updatedAt: _utc(updatedAt),
     completedAt: completedAt == null ? null : _utc(completedAt!),

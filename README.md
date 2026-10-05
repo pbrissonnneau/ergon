@@ -12,7 +12,7 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 
 | Area | What you get |
 |---|---|
-| Projects | Containers for tasks: a task belongs to zero or one project; open a project to see and create its tasks; move tasks between projects in one tap (*Move to project*, subtasks follow). Each task shows its project colour in the agenda, lists and overlay. |
+| Projects | Kanban-style swimlanes: one horizontal lane per project (plus *No project*). Drag cards between lanes to move tasks (long-press on touch), collapse a lane to a thin bar, add a task directly in a lane, or open a project as a list. Each task shows its project colour in the agenda, lists and overlay. |
 | Tasks | Title, Markdown description, project, type, status, priority, optional due date (date only or date + time), reminders, recurrence, subtasks, created/updated/completed timestamps. |
 | Types | One-time, Ongoing (background, optionally undated), Recurring. |
 | Statuses | Not Started, In Progress, Completed, Suspended, Waiting, Blocked, Cancelled. Completed/cancelled work is kept as history. |
@@ -22,12 +22,12 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 | Reminders | Several per task: at a date/time, relative to the due time (e.g. 7 days / 2 hours before), or repeating on their own schedule (e.g. every day at 19:00, also without a due date). Notifications offer **Open**, **Complete** and **Snooze**. |
 | Agenda | *Today* (urgent, due today, ongoing, recurring), *Overdue*, and optional *Upcoming* days (none / tomorrow / 3 / 7 / 14 / 30). Complete, change status/priority, snooze and expand subtasks inline. Completed work stays visible (green) for the rest of the day and disappears the next day; remove it earlier per task or with *Clear completed*. Unfinished work is never dropped: it moves to *Overdue*. |
 | Search | Instant full-text search (SQLite FTS5, prefix matching) across titles, descriptions and project names, combinable with project / status / priority / type / due date / completion filters and sorting. |
-| Desktop overlay | Compact, movable, resizable, optionally always-on-top agenda summary with the mini calendar; click an item to open it in the main app, right-click for Complete / Reschedule / Priority (right-click *OVERDUE* to move them all). Remembers position/size, opacity and visibility; can start at login. |
+| Desktop overlay | Compact, movable, resizable, optionally always-on-top agenda summary with the mini calendar; click the circle to mark a task done (green check), click an item to open it in the main app, right-click for Complete / Reschedule / Priority (right-click *OVERDUE* to move them all). Remembers position/size, opacity and visibility; can start at login. |
 | Android widget | Home-screen widget with today's and overdue tasks; tap to open a task, **+** to create one. |
-| Mini calendar | 7 grey squares (today ± 3 days) split into tiny cells in project colours (done = solid). Hover for the list, click for the day, drop a task on a day to move it. |
+| Mini calendar | 14 grey squares (from 3 days ago; weekends darker) split into tiny cells in project colours (done = solid). Hover for the list, click for the day, double-click to add a task on that day, drop a task on a day to move it. |
 | History | Scroll *up* in the agenda to go back in time, day by day, through what was completed (weekly review). |
 | Bulk actions | *Overdue ⋯*: move all overdue to today / tomorrow / next Monday / a date. Multi-select (toolbar button or Ctrl+click) to reschedule, change priority or project, or complete. Recurring occurrences are skipped rather than moved. |
-| Drag and drop | Desktop: drag a task onto a project (a drop bar appears) or onto a day of the mini calendar. |
+| Drag and drop | Desktop: in the agenda, drag to reorder tasks within a day (the order is remembered) or onto another day to change its due date; drag onto a project (a drop bar appears), a project lane, or a day of the mini calendar. |
 | Backups | Daily automatic copy of the database (default *Documents/Ergon backups*, 30 kept), *Back up now*, and *Restore* (a safety copy of the current data is made first). |
 
 Keyboard (desktop): `Ctrl+Alt+N` new task from anywhere (Windows global shortcut; on Linux bind a system shortcut to `ergon --new-task`), `Ctrl+N` new task, `Ctrl+Enter` saves (new-task dialog and editor, also from description fields), `Ctrl+F` search,
@@ -39,7 +39,7 @@ Requires Flutter 3.47+ (Dart 3.13+).
 
 ```sh
 flutter pub get
-flutter test                      # 114 tests: domain, database, reminders, migrations, UI, privacy
+flutter test                      # 119 tests: domain, database, reminders, migrations, UI, privacy
 flutter build linux --release     # Ubuntu: needs clang, cmake, ninja, libgtk-3-dev
 flutter build windows --release   # on Windows with Visual Studio (Desktop C++)
 flutter build apk --release       # Android SDK + NDK

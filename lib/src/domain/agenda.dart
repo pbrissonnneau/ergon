@@ -169,11 +169,22 @@ abstract final class AgendaBuilder {
   static int _byTitle(AgendaEntry a, AgendaEntry b) => a.task.title.toLowerCase().compareTo(b.task.title.toLowerCase());
 
   static int _byTime(AgendaEntry a, AgendaEntry b) {
+    final m = _manual(a, b);
+    if (m != 0) return m;
     final c = _cmpMinute(a, b);
     return c != 0 ? c : _byTitle(a, b);
   }
 
+  /// Manually ordered entries (drag and drop) first, in their order; the
+  /// rest by priority, time and title.
+  static int _manual(AgendaEntry a, AgendaEntry b) {
+    int key(AgendaEntry e) => e.task.dayOrder == 0 ? 1 << 30 : e.task.dayOrder;
+    return key(a).compareTo(key(b));
+  }
+
   static int _byPriorityThenTime(AgendaEntry a, AgendaEntry b) {
+    final m = _manual(a, b);
+    if (m != 0) return m;
     final p = b.task.priority.code.compareTo(a.task.priority.code);
     return p != 0 ? p : _byTime(a, b);
   }

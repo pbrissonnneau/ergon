@@ -51,6 +51,10 @@ class Tasks extends Table {
   /// When a closed task was removed from the agenda (by the user, or
   /// implicitly the day after completion). Added in schema v2.
   IntColumn get archivedAt => integer().nullable()();
+
+  /// Manual order within an agenda day (drag and drop); 0 = not ordered,
+  /// which sorts after ordered tasks by priority/time. Added in schema v3.
+  IntColumn get dayOrder => integer().withDefault(const Constant(0))();
 }
 
 /// Materialised occurrences of a recurring task. Only a bounded window is

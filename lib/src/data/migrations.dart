@@ -8,7 +8,7 @@ import 'database.dart';
 /// [strategy] that only *adds* or *transforms* data (never drops user data),
 /// and add a migration test in `test/data/migration_test.dart`.
 abstract final class Migrations {
-  static const currentVersion = 2;
+  static const currentVersion = 3;
 
   static MigrationStrategy strategy(AppDatabase db) => MigrationStrategy(
     onCreate: (m) async {
@@ -16,11 +16,15 @@ abstract final class Migrations {
       await createSearchIndex(db);
     },
     onUpgrade: (m, from, to) async {
-      if (from < 2) {
+      if (from < 2 && to >= 2) {
         // v2: completed work stays on the agenda until archived.
         await m.addColumn(db.tasks, db.tasks.archivedAt);
         await m.addColumn(db.occurrences, db.occurrences.archivedAt);
         await m.createIndex(db.idxTasksCompleted);
+      }
+      if (from < 3 && to >= 3) {
+        // v3: manual order of tasks within an agenda day.
+        await m.addColumn(db.tasks, db.tasks.dayOrder);
       }
     },
     beforeOpen: (details) async {

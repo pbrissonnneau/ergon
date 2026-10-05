@@ -70,8 +70,11 @@ class _AgendaBuilderWidgetState extends State<AgendaBuilderWidget> {
 sealed class AgendaRow {}
 
 class AgendaHeaderRow extends AgendaRow {
-  AgendaHeaderRow(this.title, {this.count, this.big = false, this.color, this.collapsible = false});
+  AgendaHeaderRow(this.title, {this.count, this.big = false, this.color, this.collapsible = false, this.section});
   final String title;
+
+  /// The section this header introduces (drop target), if any.
+  final AgendaSection? section;
   final int? count;
   final bool big;
   final Color? color;
@@ -79,8 +82,9 @@ class AgendaHeaderRow extends AgendaRow {
 }
 
 class AgendaEntryRow extends AgendaRow {
-  AgendaEntryRow(this.entry);
+  AgendaEntryRow(this.entry, this.section);
   final AgendaEntry entry;
+  final AgendaSection section;
 }
 
 List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overdueCollapsed = false}) {
@@ -93,14 +97,24 @@ List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overd
         s.kind.label,
         count: s.openCount,
         color: s.kind == AgendaSectionKind.todayUrgent ? const Color(0xFFE03131) : null,
+        section: s,
       ),
     );
-    rows.addAll(s.entries.map(AgendaEntryRow.new));
+    rows.addAll(s.entries.map((e) => AgendaEntryRow(e, s)));
   }
   final overdue = a.overdue;
   if (overdue != null) {
-    rows.add(AgendaHeaderRow('Overdue', count: overdue.openCount, big: true, color: scheme.error, collapsible: true));
-    if (!overdueCollapsed) rows.addAll(overdue.entries.map(AgendaEntryRow.new));
+    rows.add(
+      AgendaHeaderRow(
+        'Overdue',
+        count: overdue.openCount,
+        big: true,
+        color: scheme.error,
+        collapsible: true,
+        section: overdue,
+      ),
+    );
+    if (!overdueCollapsed) rows.addAll(overdue.entries.map((e) => AgendaEntryRow(e, overdue)));
   }
   final upcoming = a.upcoming.toList();
   if (upcoming.isNotEmpty) {
@@ -111,9 +125,10 @@ List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overd
         AgendaHeaderRow(
           a.today.daysUntil(d) == 1 ? 'Tomorrow · ${Fmt.longDate(d)}' : Fmt.longDate(d),
           count: s.openCount,
+          section: s,
         ),
       );
-      rows.addAll(s.entries.map(AgendaEntryRow.new));
+      rows.addAll(s.entries.map((e) => AgendaEntryRow(e, s)));
     }
   }
   return rows;
