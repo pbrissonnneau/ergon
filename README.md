@@ -52,6 +52,18 @@ Notes:
   `dart run build_runner build` and see *Database migrations* below.
 - Run the tests in DST-heavy zones too, e.g. `TZ=Europe/Paris flutter test` or `TZ=Australia/Lord_Howe flutter test`.
 
+## Windows test builds (CI)
+
+`.github/workflows/release-windows.yml` analyses and tests the code on Ubuntu, then builds the Windows app and
+publishes it as an **AES-256 encrypted 7z archive** (file names encrypted too).
+
+1. Once: add the repository secret `RELEASE_ARCHIVE_PASSWORD` (*Settings → Secrets and variables → Actions*).
+2. Push, or run *Actions → Windows release → Run workflow*. Pushing a `v*` tag also attaches the archive to a
+   GitHub Release.
+3. Download the artifact from the run page, unzip the GitHub wrapper, then open `ergon-windows-x64-*.7z` with 7-Zip
+   using your password and run `ergon.exe` (keep the folder together; no installation or admin rights needed).
+   A `.sha256` checksum is included.
+
 ## Command line (desktop)
 
 ```
