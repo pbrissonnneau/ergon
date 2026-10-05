@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -109,6 +111,28 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (v) => st.snoozeMinutes = v!,
                   ),
                 ),
+                if (platform.isDesktop) ...[
+                  const _Header('Keyboard'),
+                  if (platform.supportsGlobalHotkey)
+                    SwitchListTile(
+                      secondary: const Icon(Icons.keyboard_outlined),
+                      title: const Text('Global shortcut Ctrl+Alt+N'),
+                      subtitle: const Text(
+                        'Opens “New task” from any application, even when Ergon is in the background',
+                      ),
+                      value: st.globalHotkeyEnabled,
+                      onChanged: (v) => st.globalHotkeyEnabled = v,
+                    )
+                  else
+                    ListTile(
+                      leading: const Icon(Icons.keyboard_outlined),
+                      title: const Text('Global “New task” shortcut'),
+                      subtitle: SelectableText(
+                        'Add a custom shortcut in your desktop’s keyboard settings (e.g. GNOME Settings → '
+                        'Keyboard → Custom Shortcuts) that runs:\n${Platform.resolvedExecutable} --new-task',
+                      ),
+                    ),
+                ],
                 if (platform.supportsOverlay) ...[
                   const _Header('Desktop overlay'),
                   SwitchListTile(

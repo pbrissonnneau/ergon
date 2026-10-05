@@ -14,6 +14,8 @@ import '../../platform/desktop/desktop_integration.dart';
 import '../../platform/desktop/instance_ipc.dart';
 import '../../platform/desktop/native_window.dart';
 import '../agenda/agenda_view.dart';
+import '../agenda/week_strip.dart';
+import '../bulk_actions.dart';
 import '../formatting.dart';
 import '../theme.dart';
 
@@ -102,6 +104,10 @@ class OverlayIntegration extends DesktopIntegration {
       await Process.start(Platform.resolvedExecutable, args, mode: ProcessStartMode.detached);
     }
   }
+
+  /// Ctrl+Alt+N while the overlay owns the shortcut: quick add in the main app.
+  @override
+  void onGlobalHotkey() => unawaited(quickAddInMain());
 
   Future<void> openInMain(int taskId) =>
       _toMain(IpcCommand(IpcCommand.openTask, {'taskId': taskId}), ['--open-task=$taskId']);
@@ -216,6 +222,13 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
                   },
                 ),
                 const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: WeekStrip(compact: true, square: 24, onOpenTask: platform.openInMain),
+                  ),
+                ),
                 Expanded(
                   child: AgendaBuilderWidget(
                     upcomingDaysOverride: s.settings.overlayShowUpcoming ? s.settings.upcomingDays.clamp(1, 7) : 0,
@@ -311,20 +324,38 @@ class _OverlayList extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final rows = <Widget>[];
-    void header(String t, int n, [Color? c]) => rows.add(
-      Padding(
+    void header(String t, int n, [Color? c, void Function(Offset at)? menu]) {
+      final label = Padding(
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
-        child: Text(
-          '$t · $n',
-          style: theme.textTheme.labelSmall?.copyWith(color: c ?? scheme.primary, fontWeight: FontWeight.w700),
+        child: Row(
+          children: [
+            Text(
+              '$t · $n',
+              style: theme.textTheme.labelSmall?.copyWith(color: c ?? scheme.primary, fontWeight: FontWeight.w700),
+            ),
+            const Spacer(),
+            if (menu != null)
+              Builder(
+                builder: (b) => InkWell(
+                  onTap: () {
+                    final box = b.findRenderObject()! as RenderBox;
+                    menu(box.localToGlobal(box.size.bottomLeft(Offset.zero)));
+                  },
+                  child: Icon(Icons.more_horiz, size: 16, color: c),
+                ),
+              ),
+          ],
         ),
-      ),
-    );
+      );
+      rows.add(menu == null ? label : GestureDetector(onSecondaryTapUp: (d) => menu(d.globalPosition), child: label));
+    }
+
     void entries(Iterable<AgendaEntry> es, {bool overdue = false}) {
       for (final e in es) {
         rows.add(
           InkWell(
             onTap: () => onOpen(e.task.id),
+            onSecondaryTapUp: (d) => _taskMenu(context, e, d.globalPosition),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               child: Row(
@@ -383,7 +414,12 @@ class _OverlayList extends StatelessWidget {
 
     final overdue = agenda.overdue;
     if (overdue != null) {
-      header('OVERDUE', overdue.entries.length, scheme.error);
+      header(
+        'OVERDUE',
+        overdue.openCount,
+        scheme.error,
+        (at) => _overdueMenu(context, overdue.entries.where((e) => !e.isDone).toList(), at),
+      );
       entries(overdue.entries, overdue: true);
     }
     header('TODAY', agenda.todayCount);
@@ -407,5 +443,76 @@ class _OverlayList extends StatelessWidget {
       );
     }
     return ListView(padding: const EdgeInsets.only(bottom: 8), children: rows);
+  }
+
+  RelativeRect _at(BuildContext context, Offset p) {
+    final size = MediaQuery.sizeOf(context);
+    return RelativeRect.fromLTRB(p.dx, p.dy, size.width - p.dx, size.height - p.dy);
+  }
+
+  /// Right-click on a task: complete, reschedule, priority, open.
+  Future<void> _taskMenu(BuildContext context, AgendaEntry e, Offset at) async {
+    final s = AppScope.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final choice = await showMenu<Object>(
+      context: context,
+      position: _at(context, at),
+      items: [
+        PopupMenuItem<Object>(
+          value: 'toggle',
+          child: Row(
+            children: [
+              Icon(e.isDone ? Icons.radio_button_unchecked : Icons.check_circle_outline, size: 18),
+              const SizedBox(width: 10),
+              Text(e.isDone ? 'Mark as not done' : 'Complete'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        if (e.isOccurrence)
+          const PopupMenuItem<Object>(
+            value: 'skip',
+            child: Row(children: [Icon(Icons.skip_next, size: 18), SizedBox(width: 10), Text('Skip this occurrence')]),
+          )
+        else
+          ...BulkActions.rescheduleItems(includePick: false, height: 34),
+        const PopupMenuDivider(),
+        ...BulkActions.priorityItems(scheme, height: 34),
+        const PopupMenuDivider(),
+        const PopupMenuItem<Object>(
+          value: 'open',
+          child: Row(children: [Icon(Icons.open_in_new, size: 18), SizedBox(width: 10), Text('Open in Ergon')]),
+        ),
+      ],
+    );
+    if (choice == null || !context.mounted) return;
+    switch (choice) {
+      case 'open':
+        onOpen(e.task.id);
+      case 'skip':
+        await s.tasks.skipOccurrences(e.task.id, e.occurrence!.date);
+      case 'toggle':
+        final next = e.isDone ? TaskStatus.notStarted : TaskStatus.completed;
+        final occ = e.occurrence;
+        occ != null
+            ? await s.tasks.setOccurrenceStatus(e.task.id, occ.date, next)
+            : await s.tasks.setStatus(e.task.id, next);
+      default:
+        await BulkActions.applyMenuChoice(context, s, choice, [e]);
+    }
+  }
+
+  /// Right-click (or ⋯) on OVERDUE: move every overdue task at once.
+  Future<void> _overdueMenu(BuildContext context, List<AgendaEntry> overdue, Offset at) async {
+    final s = AppScope.of(context);
+    final choice = await showMenu<Object>(
+      context: context,
+      position: _at(context, at),
+      items: [
+        const PopupMenuItem<Object>(enabled: false, height: 28, child: Text('Move all overdue to…')),
+        ...BulkActions.rescheduleItems(includePick: false, height: 34),
+      ],
+    );
+    if (choice != null && context.mounted) await BulkActions.applyMenuChoice(context, s, choice, overdue);
   }
 }

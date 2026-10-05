@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../services/notifications/notification_gateway.dart';
 import '../platform_integration.dart';
 import 'autostart.dart';
+import 'global_hotkey.dart';
 import 'instance_ipc.dart';
 
 /// Windows and Linux desktop integration (main window process).
@@ -39,6 +40,22 @@ class DesktopIntegration extends PlatformIntegration {
   NotificationGateway createNotificationGateway() => pluginGateway(osScheduled: osSchedulesNotifications);
 
   InstanceChannel? _notifier;
+
+  late final GlobalHotkey _hotkey = GlobalHotkey(onGlobalHotkey);
+
+  /// What Ctrl+Alt+N does in this process (main window: show quick add).
+  void onGlobalHotkey() {
+    unawaited(bringToFront());
+    _add.add(null);
+  }
+
+  @override
+  bool get supportsGlobalHotkey => Platform.isWindows;
+
+  @override
+  Future<void> setGlobalHotkeyEnabled(bool enabled) async {
+    if (supportsGlobalHotkey) await _hotkey.setEnabled(enabled);
+  }
 
   @override
   Future<bool> tryAcquireReminderHost() async {

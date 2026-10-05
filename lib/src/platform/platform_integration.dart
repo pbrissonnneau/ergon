@@ -56,6 +56,10 @@ abstract class PlatformIntegration {
   /// Restarts the application (used to finish restoring a backup).
   Future<void> restartApp() async => exit(0);
 
+  /// Whether a system-wide "new task" shortcut can be registered.
+  bool get supportsGlobalHotkey => false;
+  Future<void> setGlobalHotkeyEnabled(bool enabled) async {}
+
   /// Login autostart of the overlay; null when unsupported.
   Future<bool?> overlayAutostartEnabled() async => null;
   Future<void> setOverlayAutostart(bool enabled) async {}

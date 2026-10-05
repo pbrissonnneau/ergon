@@ -102,20 +102,26 @@ abstract final class BulkActions {
   }
 
   /// Menu entries for rescheduling (values are [RescheduleTarget]s).
-  static List<PopupMenuEntry<Object>> rescheduleItems({bool includeNoDate = false}) => [
+  static List<PopupMenuEntry<Object>> rescheduleItems({
+    bool includeNoDate = false,
+    bool includePick = true,
+    double? height,
+  }) => [
     for (final t in RescheduleTarget.values)
-      if (t != RescheduleTarget.noDate || includeNoDate)
+      if ((t != RescheduleTarget.noDate || includeNoDate) && (t != RescheduleTarget.pick || includePick))
         PopupMenuItem<Object>(
           value: t,
+          height: height ?? kMinInteractiveDimension,
           child: Row(children: [Icon(t.icon, size: 18), const SizedBox(width: 10), Text(t.label)]),
         ),
   ];
 
   /// Menu entries for priorities (values are [TaskPriority]s).
-  static List<PopupMenuEntry<Object>> priorityItems(ColorScheme scheme) => [
+  static List<PopupMenuEntry<Object>> priorityItems(ColorScheme scheme, {double? height}) => [
     for (final p in TaskPriority.values.reversed)
       PopupMenuItem<Object>(
         value: p,
+        height: height ?? kMinInteractiveDimension,
         child: Row(
           children: [
             Icon(AppTheme.priorityIcon(p), size: 18, color: AppTheme.priorityColor(p, scheme)),

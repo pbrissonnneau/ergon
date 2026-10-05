@@ -122,6 +122,11 @@ class AppServices {
     if (initial != null) _openRequests.add(initial);
     unawaited(tasks.materializeAll());
     if (watchExternalChanges) startExternalChangeWatcher();
+    if (platform.supportsGlobalHotkey) {
+      void applyHotkey() => unawaited(platform.setGlobalHotkeyEnabled(settings.globalHotkeyEnabled));
+      settings.addListener(applyHotkey);
+      applyHotkey();
+    }
     // Notification set-up (plugin init, OS permission state, reconciliation)
     // is not needed for the first screen; give the UI a head start.
     _reminderStart = Timer(reminderStartDelay, () => unawaited(reminders.start()));
