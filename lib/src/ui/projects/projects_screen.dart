@@ -16,9 +16,9 @@ import '../theme.dart';
 import '../widgets/live_query.dart';
 import '../widgets/task_drag.dart';
 
-/// Projects as Kanban-style swimlanes: one horizontal lane per project,
-/// stacked vertically. Drag a card to another lane to move the task;
-/// collapse lanes to keep only their header.
+/// Projects as a Kanban board: one vertical column per project, side by
+/// side. Drag a card to another column to move the task; collapse a column
+/// to squash it into a thin strip.
 class ProjectsScreen extends StatelessWidget {
   const ProjectsScreen({super.key});
 
@@ -106,7 +106,6 @@ class ProjectsScreen extends StatelessWidget {
   }
 }
 
-
 /// Lane identity: a project id, or -1 for tasks without a project.
 const _noProject = -1;
 
@@ -119,6 +118,13 @@ class _SwimlaneBoard extends StatefulWidget {
 class _SwimlaneBoardState extends State<_SwimlaneBoard> {
   static const _collapsedKey = 'projects.collapsed';
   Set<int>? _collapsed;
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -156,30 +162,39 @@ class _SwimlaneBoardState extends State<_SwimlaneBoard> {
           ];
           return ValueListenableBuilder<LocalDate>(
             valueListenable: s.today,
-            builder: (context, today, _) => ListView(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
-              children: [
-                if (projects.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Create projects to group your tasks; drag cards between lanes to move them.',
-                      style: TextStyle(color: Theme.of(context).colorScheme.outline),
+            builder: (context, today, _) => Scrollbar(
+              controller: _scroll,
+              thumbVisibility: s.platform.isDesktop,
+              child: ListView(
+                controller: _scroll,
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                children: [
+                  if (projects.isEmpty)
+                    SizedBox(
+                      width: 220,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'Create projects to group your tasks; drag cards between columns to move them.',
+                          style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                        ),
+                      ),
                     ),
-                  ),
-                for (final (id, name, color, project) in lanes)
-                  _Lane(
-                    key: ValueKey('lane$id'),
-                    laneId: id,
-                    name: name,
-                    color: color,
-                    project: project,
-                    tasks: byLane[id] ?? const [],
-                    today: today,
-                    collapsed: _collapsed!.contains(id),
-                    onToggle: () => _toggle(id),
-                  ),
-              ],
+                  for (final (id, name, color, project) in lanes)
+                    _Lane(
+                      key: ValueKey('lane$id'),
+                      laneId: id,
+                      name: name,
+                      color: color,
+                      project: project,
+                      tasks: byLane[id] ?? const [],
+                      today: today,
+                      collapsed: _collapsed!.contains(id),
+                      onToggle: () => _toggle(id),
+                    ),
+                ],
+              ),
             ),
           );
         },
@@ -209,6 +224,9 @@ class _Lane extends StatelessWidget {
   final bool collapsed;
   final VoidCallback onToggle;
 
+  static const expandedWidth = 300.0;
+  static const collapsedWidth = 44.0;
+
   @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
@@ -220,106 +238,152 @@ class _Lane extends StatelessWidget {
       builder: (context, candidates, _) {
         final hover = candidates.isNotEmpty;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          margin: const EdgeInsets.only(bottom: 10),
+          duration: const Duration(milliseconds: 150),
+          width: collapsed ? collapsedWidth : expandedWidth,
+          margin: const EdgeInsets.only(right: 10),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: hover ? color.withValues(alpha: 0.14) : scheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
-            border: Border(left: BorderSide(color: color, width: 5)),
+            border: Border(top: BorderSide(color: color, width: 5)),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: onToggle,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
-                  child: Row(
-                    children: [
-                      Icon(collapsed ? Icons.chevron_right : Icons.expand_more, size: 20, color: scheme.outline),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          name,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('${tasks.length}', style: theme.textTheme.labelMedium?.copyWith(color: scheme.outline)),
-                      if (collapsed && tasks.isNotEmpty) ...[
-                        const SizedBox(width: 10),
-                        // Collapsed: a tiny summary of what is inside.
-                        for (final t in tasks.take(12))
-                          Padding(
-                            padding: const EdgeInsets.only(right: 3),
-                            child: Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: AppTheme.priorityColor(t.task.priority, scheme),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                      ],
-                      const Spacer(),
-                      IconButton(
-                        tooltip: 'New task in $name',
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.add, size: 20),
-                        onPressed: () => QuickAdd.show(context, projectId: project?.id),
-                      ),
-                      PopupMenuButton<String>(
-                        tooltip: 'Lane actions',
-                        icon: const Icon(Icons.more_vert, size: 20),
-                        onSelected: (v) async {
-                          switch (v) {
-                            case 'list':
-                              await Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => TasksScreen(
-                                    project: project ?? const Project(id: -1, name: 'No project', color: 0xFF9E9E9E),
-                                  ),
-                                ),
-                              );
-                            case 'edit':
-                              await ProjectsScreen.editProject(context, project: project);
-                            case 'delete':
-                              await ProjectsScreen._delete(context, project!);
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'list', child: Text('Open as list (search, filters)')),
-                          if (project != null) ...[
-                            const PopupMenuItem(value: 'edit', child: Text('Rename / colour')),
-                            const PopupMenuItem(value: 'delete', child: Text('Delete project')),
-                          ],
-                        ],
-                      ),
-                    ],
+          child: collapsed ? _collapsedBody(context) : _expandedBody(context, hover),
+        );
+      },
+    );
+  }
+
+  /// Squashed lane: a thin column with the name written vertically.
+  Widget _collapsedBody(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return InkWell(
+      onTap: onToggle,
+      child: Tooltip(
+        message: '$name · ${tasks.length} task${tasks.length == 1 ? '' : 's'} (click to expand)',
+        child: Column(
+          children: [
+            const SizedBox(height: 6),
+            Icon(Icons.chevron_right, size: 20, color: scheme.outline),
+            Text('${tasks.length}', style: theme.textTheme.labelMedium?.copyWith(color: scheme.outline)),
+            const SizedBox(height: 8),
+            Flexible(
+              child: RotatedBox(
+                quarterTurns: 1,
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // A tiny summary of what is inside.
+            for (final t in tasks.take(12))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: AppTheme.priorityColor(t.task.priority, scheme),
+                    shape: BoxShape.circle,
                   ),
                 ),
               ),
-              if (!collapsed)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: tasks.isEmpty
-                      ? Text(
-                          hover ? 'Drop here' : 'No open tasks — drag one here',
-                          style: theme.textTheme.bodySmall?.copyWith(color: scheme.outline),
-                        )
-                      : Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [for (final t in tasks) _TaskCard(key: ValueKey(t.task.id), item: t, today: today)],
-                        ),
+            const SizedBox(height: 6),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _expandedBody(BuildContext context, bool hover) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+            child: Row(
+              children: [
+                Tooltip(
+                  message: 'Collapse',
+                  child: Icon(Icons.chevron_left, size: 20, color: scheme.outline),
                 ),
-            ],
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('${tasks.length}', style: theme.textTheme.labelMedium?.copyWith(color: scheme.outline)),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'New task in $name',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                  icon: const Icon(Icons.add, size: 20),
+                  onPressed: () => QuickAdd.show(context, projectId: project?.id),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Column actions',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: (v) async {
+                    switch (v) {
+                      case 'list':
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => TasksScreen(
+                              project: project ?? const Project(id: -1, name: 'No project', color: 0xFF9E9E9E),
+                            ),
+                          ),
+                        );
+                      case 'edit':
+                        await ProjectsScreen.editProject(context, project: project);
+                      case 'delete':
+                        await ProjectsScreen._delete(context, project!);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'list', child: Text('Open as list (search, filters)')),
+                    if (project != null) ...[
+                      const PopupMenuItem(value: 'edit', child: Text('Rename / colour')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete project')),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: tasks.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    hover ? 'Drop here' : 'No open tasks — drag one here',
+                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.outline),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                  itemCount: tasks.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) => _TaskCard(key: ValueKey(tasks[i].task.id), item: tasks[i], today: today),
+                ),
+        ),
+      ],
     );
   }
 }
@@ -348,7 +412,7 @@ class _TaskCard extends StatelessWidget {
         onTap: () => TaskActions.open(context, t.id),
         onSecondaryTapUp: (_) => TaskActions.showQuickActions(context, item),
         child: SizedBox(
-          width: 220,
+          width: double.infinity,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(4, 6, 10, 8),
             child: Row(

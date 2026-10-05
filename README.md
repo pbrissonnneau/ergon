@@ -12,7 +12,7 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 
 | Area | What you get |
 |---|---|
-| Projects | Kanban-style swimlanes: one horizontal lane per project (plus *No project*). Drag cards between lanes to move tasks (long-press on touch), collapse a lane to a thin bar, add a task directly in a lane, or open a project as a list. Each task shows its project colour in the agenda, lists and overlay. |
+| Projects | Kanban board: one vertical column per project (plus *No project*). Drag cards between columns to move tasks (long-press on touch), collapse a column into a thin strip, add a task directly in a column, or open a project as a list. Each task shows its project colour in the agenda, lists and overlay. |
 | Tasks | Title, Markdown description, project, type, status, priority, optional due date (date only or date + time), reminders, recurrence, subtasks, created/updated/completed timestamps. |
 | Types | One-time, Ongoing (background, optionally undated), Recurring. |
 | Statuses | Not Started, In Progress, Completed, Suspended, Waiting, Blocked, Cancelled. Completed/cancelled work is kept as history. |
@@ -27,7 +27,7 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 | Mini calendar | 14 grey squares (from 3 days ago; weekends darker) split into tiny cells in project colours (done = solid). Hover for the list, click for the day, double-click to add a task on that day, drop a task on a day to move it. |
 | History | Scroll *up* in the agenda to go back in time, day by day, through what was completed (weekly review). |
 | Bulk actions | *Overdue ⋯*: move all overdue to today / tomorrow / next Monday / a date. Multi-select (toolbar button or Ctrl+click) to reschedule, change priority or project, or complete. Recurring occurrences are skipped rather than moved. |
-| Drag and drop | Desktop: in the agenda, drag to reorder tasks within a day (the order is remembered) or onto another day to change its due date; drag onto a project (a drop bar appears), a project lane, or a day of the mini calendar. |
+| Drag and drop | Desktop: in the agenda, drag to reorder tasks within a day (the order is remembered) or onto another day to change its due date; drag onto a project (a drop bar appears), a project column, or a day of the mini calendar. |
 | Backups | Daily automatic copy of the database (default *Documents/Ergon backups*, 30 kept), *Back up now*, and *Restore* (a safety copy of the current data is made first). |
 
 Keyboard (desktop): `Ctrl+Alt+N` new task from anywhere (Windows global shortcut; on Linux bind a system shortcut to `ergon --new-task`), `Ctrl+N` new task, `Ctrl+Enter` saves (new-task dialog and editor, also from description fields), `Ctrl+F` search,
