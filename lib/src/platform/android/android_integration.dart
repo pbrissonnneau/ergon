@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/local_date.dart';
 import '../../domain/agenda.dart';
@@ -44,6 +47,17 @@ class AndroidIntegration extends PlatformIntegration {
     } on MissingPluginException {
       // No native side (tests).
     }
+  }
+
+  /// App-specific external storage: reachable over USB/file managers, no
+  /// storage permission required.
+  @override
+  Future<Directory> defaultBackupFolder(Directory dataDir) async {
+    try {
+      final ext = await getExternalStorageDirectory();
+      if (ext != null) return Directory(p.join(ext.path, 'backups'));
+    } catch (_) {}
+    return super.defaultBackupFolder(dataDir);
   }
 
   @override

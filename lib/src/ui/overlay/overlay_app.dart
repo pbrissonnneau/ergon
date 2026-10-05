@@ -48,7 +48,7 @@ Future<void> runOverlay(Directory dataDir) async {
 
   runApp(OverlayApp(services: services, dataDir: dataDir));
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(services.startBackground(watchExternalChanges: true));
+    unawaited(services.startBackground(watchExternalChanges: true, runBackups: false));
   });
 }
 

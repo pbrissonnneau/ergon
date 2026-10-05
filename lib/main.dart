@@ -15,6 +15,7 @@ import 'src/data/task_repository.dart';
 import 'src/platform/desktop/desktop_integration.dart';
 import 'src/platform/desktop/instance_ipc.dart';
 import 'src/platform/platform_integration.dart';
+import 'src/services/backup_service.dart';
 import 'src/services/notifications/local_notifications_gateway.dart';
 import 'src/services/notifications/notification_payload.dart';
 import 'src/services/notifications/notification_reconciler.dart';
@@ -43,7 +44,13 @@ Future<void> main(List<String> args) async {
   if (platform is DesktopIntegration) {
     // Single instance: forward the request to the running window and quit.
     final channel = InstanceChannel(dataDir, 'main');
-    if (!await channel.tryAcquire()) {
+    var acquired = await channel.tryAcquire();
+    // After a restart (backup restore) the previous process may still be exiting.
+    for (var i = 0; !acquired && args.contains('--restarted') && i < 50; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      acquired = await channel.tryAcquire();
+    }
+    if (!acquired) {
       await InstanceChannel.send(
         dataDir,
         'main',
@@ -64,6 +71,9 @@ Future<void> main(List<String> args) async {
   // Android: notification actions tapped while the app is not running.
   notificationBackgroundEntryPoint = notificationBackgroundHandler;
 
+  // A backup restore chosen in Settings is applied before the database opens.
+  final restoreMessage = await BackupService.applyPendingRestore(dataDir);
+
   // Open the database (background isolate) while the window is configured.
   final servicesFuture = AppServices.open(dataDir, platform);
   if (platform.isDesktop) {
@@ -72,6 +82,7 @@ Future<void> main(List<String> args) async {
     unawaited(windowManager.setMinimumSize(const Size(380, 480)));
   }
   final services = await servicesFuture;
+  services.startupMessage = restoreMessage;
   StartupTrace.mark('services');
   runApp(ErgonApp(services: services, dataPath: dataDir.path));
 

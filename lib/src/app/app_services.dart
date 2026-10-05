@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
+import 'package:path/path.dart' as p;
 
 import '../core/local_date.dart';
 import '../data/agenda_service.dart';
@@ -11,13 +12,26 @@ import '../data/project_repository.dart';
 import '../data/settings_repository.dart';
 import '../data/task_repository.dart';
 import '../platform/platform_integration.dart';
+import '../services/backup_service.dart';
 import '../services/reminder_host.dart';
 
 /// Composition root: owns every long-lived service of a process.
 class AppServices {
-  AppServices._({required this.db, required this.settings, required this.platform, required this.clock})
-    : tasks = TaskRepository(db, clock: clock),
-      projects = ProjectRepository(db, clock: clock) {
+  AppServices._({
+    required this.db,
+    required this.settings,
+    required this.platform,
+    required this.clock,
+    required this.dataDir,
+  }) : tasks = TaskRepository(db, clock: clock),
+       projects = ProjectRepository(db, clock: clock) {
+    backups = BackupService(
+      db: db,
+      settings: settings,
+      dataDir: dataDir,
+      defaultFolder: Directory(p.join(dataDir.path, 'backups')),
+      clock: clock,
+    );
     agenda = AgendaService(tasks);
     tasks.lookaheadDays = settings.upcomingDays > 14 ? settings.upcomingDays : 14;
     reminders = ReminderHost(
@@ -34,13 +48,27 @@ class AppServices {
     required AppDatabase db,
     required PlatformIntegration platform,
     Clock clock = const SystemClock(),
+    Directory? dataDir,
   }) async {
     final settings = await AppSettings.load(db);
-    return AppServices._(db: db, settings: settings, platform: platform, clock: clock);
+    return AppServices._(
+      db: db,
+      settings: settings,
+      platform: platform,
+      clock: clock,
+      dataDir: dataDir ?? Directory.systemTemp,
+    );
   }
 
   static Future<AppServices> open(Directory dataDir, PlatformIntegration platform) =>
-      create(db: openAppDatabase(dataDir), platform: platform);
+      create(db: openAppDatabase(dataDir), platform: platform, dataDir: dataDir);
+
+  final Directory dataDir;
+  late final BackupService backups;
+
+  /// One-off message to show after start-up (e.g. result of a restore).
+  String? startupMessage;
+  Timer? _backupTimer;
 
   final AppDatabase db;
   final AppSettings settings;
@@ -75,6 +103,7 @@ class AppServices {
       today.value = d;
       unawaited(tasks.materializeAll());
       reminders.scheduleReconcile();
+      if (_backupsEnabled) unawaited(_dailyBackup());
     }
     _midnight?.cancel();
     final next = d.addDays(1).atMinute(0).add(const Duration(seconds: 1));
@@ -83,7 +112,9 @@ class AppServices {
 
   /// Background start-up work, run after the first frame so it never delays
   /// the initial paint.
-  Future<void> startBackground({bool watchExternalChanges = false}) async {
+  /// [runBackups] is false in the overlay process (the main window owns them).
+  Future<void> startBackground({bool watchExternalChanges = false, bool runBackups = true}) async {
+    _backupsEnabled = runBackups;
     refreshDay();
     platform.openTaskRequests.listen(_openRequests.add);
     await platform.start();
@@ -94,6 +125,20 @@ class AppServices {
     // Notification set-up (plugin init, OS permission state, reconciliation)
     // is not needed for the first screen; give the UI a head start.
     _reminderStart = Timer(reminderStartDelay, () => unawaited(reminders.start()));
+    if (runBackups) {
+      backups.defaultFolder = await platform.defaultBackupFolder(dataDir);
+      _backupTimer = Timer(const Duration(seconds: 5), () => unawaited(_dailyBackup()));
+    }
+  }
+
+  bool _backupsEnabled = false;
+
+  Future<void> _dailyBackup() async {
+    try {
+      await backups.runIfDue();
+    } catch (e) {
+      debugPrint('Automatic backup failed: $e');
+    }
   }
 
   /// Another process (overlay <-> main window) may write the same database.
@@ -116,6 +161,7 @@ class AppServices {
     _externalPoll?.cancel();
     _midnight?.cancel();
     _reminderStart?.cancel();
+    _backupTimer?.cancel();
     await reminders.dispose();
     await platform.dispose();
     await db.close();

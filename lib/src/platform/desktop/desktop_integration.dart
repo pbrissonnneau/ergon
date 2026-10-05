@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../services/notifications/notification_gateway.dart';
@@ -86,6 +88,27 @@ class DesktopIntegration extends PlatformIntegration {
     } else if (!visible && running) {
       await InstanceChannel.send(dataDir, 'overlay', const IpcCommand(IpcCommand.close));
     }
+  }
+
+  @override
+  Future<Directory> defaultBackupFolder(Directory dataDir) async {
+    try {
+      // Visible to the user and independent of the app's own data folder.
+      return Directory(p.join((await getApplicationDocumentsDirectory()).path, 'Ergon backups'));
+    } catch (_) {
+      return super.defaultBackupFolder(dataDir);
+    }
+  }
+
+  @override
+  Future<void> restartApp() async {
+    // The overlay keeps the database open; it must close for the swap.
+    if (await InstanceChannel.isRunning(dataDir, 'overlay')) {
+      await InstanceChannel.send(dataDir, 'overlay', const IpcCommand(IpcCommand.close));
+    }
+    await mainChannel?.dispose(); // Release the single-instance lock first.
+    await Process.start(Platform.resolvedExecutable, const ['--restarted'], mode: ProcessStartMode.detached);
+    exit(0);
   }
 
   @override

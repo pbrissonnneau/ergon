@@ -1,7 +1,12 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_services.dart';
 import '../../core/local_date.dart';
+import '../../services/backup_service.dart';
+import '../formatting.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.dataPath});
@@ -143,6 +148,8 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const _AutostartTile(),
                 ],
+                const _Header('Backups'),
+                const _BackupSection(),
                 const _Header('Appearance'),
                 ListTile(
                   leading: const Icon(Icons.brightness_6_outlined),
@@ -233,6 +240,162 @@ class _AutostartTileState extends State<_AutostartTile> {
               final now = await platform.overlayAutostartEnabled();
               if (mounted) setState(() => _enabled = now);
             },
+    );
+  }
+}
+
+class _BackupSection extends StatefulWidget {
+  const _BackupSection();
+  @override
+  State<_BackupSection> createState() => _BackupSectionState();
+}
+
+class _BackupSectionState extends State<_BackupSection> {
+  List<BackupFile>? _backups;
+  bool _busy = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_backups == null) _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final list = await AppScope.of(context).backups.list();
+    if (mounted) setState(() => _backups = list);
+  }
+
+  void _toast(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _backupNow() async {
+    setState(() => _busy = true);
+    try {
+      final f = await AppScope.of(context).backups.backupNow();
+      _toast('Backup saved: ${p.basename(f.path)}');
+    } catch (e) {
+      _toast('Backup failed: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+      await _refresh();
+    }
+  }
+
+  Future<void> _chooseFolder() async {
+    final s = AppScope.of(context);
+    final path = await getDirectoryPath(confirmButtonText: 'Use this folder', initialDirectory: s.backups.folder.path);
+    if (path == null) return;
+    s.settings.backupFolder = path;
+    await _refresh();
+  }
+
+  Future<void> _restore() async {
+    final s = AppScope.of(context);
+    final backups = await s.backups.list();
+    if (!mounted) return;
+    if (backups.isEmpty) return _toast('No backups in ${s.backups.folder.path}');
+    final chosen = await showDialog<BackupFile>(
+      context: context,
+      builder: (c) => SimpleDialog(
+        title: const Text('Restore from backup'),
+        children: [
+          for (final b in backups.take(60))
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(c, b),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.restore),
+                title: Text(b.name),
+                subtitle: Text('${Fmt.timestamp(b.modified, s.clock.today())} · ${(b.sizeBytes / 1024).ceil()} KB'),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Restore this backup?'),
+        content: Text(
+          'All current data will be replaced by “${chosen.name}”.\n\n'
+          'A copy of the current data is saved first (ergon-before-restore-….sqlite in the backup folder), '
+          'so this can be undone. Ergon restarts to apply it.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Restore and restart')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await s.backups.scheduleRestore(chosen.file);
+    await s.platform.restartApp();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppScope.of(context);
+    final st = s.settings;
+    final last = _backups?.isEmpty ?? true ? null : _backups!.first;
+    return Column(
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.backup_outlined),
+          title: const Text('Daily automatic backup'),
+          subtitle: Text(
+            last == null ? 'No backup yet' : 'Last: ${last.name} (${Fmt.timestamp(last.modified, s.clock.today())})',
+          ),
+          value: st.backupEnabled,
+          onChanged: (v) => st.backupEnabled = v,
+        ),
+        ListTile(
+          leading: const Icon(Icons.folder_outlined),
+          title: const Text('Backup folder'),
+          subtitle: SelectableText(s.backups.folder.path),
+          trailing: s.platform.isDesktop
+              ? Wrap(
+                  spacing: 4,
+                  children: [
+                    TextButton(onPressed: _chooseFolder, child: const Text('Change…')),
+                    TextButton(
+                      onPressed: () async {
+                        await s.backups.folder.create(recursive: true);
+                        await launchUrl(Uri.directory(s.backups.folder.path));
+                      },
+                      child: const Text('Open'),
+                    ),
+                  ],
+                )
+              : null,
+        ),
+        ListTile(
+          leading: const Icon(Icons.history),
+          title: const Text('Daily backups kept'),
+          trailing: DropdownButton<int>(
+            value: const [7, 14, 30, 90, 365].contains(st.backupKeep) ? st.backupKeep : 30,
+            items: const [
+              DropdownMenuItem(value: 7, child: Text('7')),
+              DropdownMenuItem(value: 14, child: Text('14')),
+              DropdownMenuItem(value: 30, child: Text('30')),
+              DropdownMenuItem(value: 90, child: Text('90')),
+              DropdownMenuItem(value: 365, child: Text('365')),
+            ],
+            onChanged: (v) => st.backupKeep = v!,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.save_alt),
+          title: const Text('Back up now'),
+          enabled: !_busy,
+          onTap: _backupNow,
+        ),
+        ListTile(
+          leading: const Icon(Icons.settings_backup_restore),
+          title: const Text('Restore from a backup…'),
+          subtitle: Text(_backups == null ? '' : '${_backups!.length} backup(s) available'),
+          onTap: _restore,
+        ),
+      ],
     );
   }
 }

@@ -70,6 +70,26 @@ class AppSettings extends ChangeNotifier {
   int get overlayOpacityPercent => _int('overlay.opacity', 96);
   set overlayOpacityPercent(int v) => unawaited(_set('overlay.opacity', '$v'));
 
+  /// Daily automatic backup of the database (on by default).
+  bool get backupEnabled => _bool('backup.enabled', true);
+  set backupEnabled(bool v) => unawaited(_set('backup.enabled', v ? '1' : '0'));
+
+  /// Backup folder chosen by the user (null = platform default).
+  String? get backupFolder => _values['backup.folder'];
+  set backupFolder(String? v) => unawaited(_set('backup.folder', v ?? ''));
+
+  /// Number of daily backups kept.
+  int get backupKeep => _int('backup.keep', 30);
+  set backupKeep(int v) => unawaited(_set('backup.keep', '$v'));
+
+  /// Civil date (YYYY-MM-DD) of the last automatic backup.
+  String? get lastBackupDay => _values['backup.lastDay'];
+  set lastBackupDay(String? v) => unawaited(_set('backup.lastDay', v ?? ''));
+
+  /// Desktop: system-wide Ctrl+Alt+N opens the new-task dialog.
+  bool get globalHotkeyEnabled => _bool('hotkey.enabled', true);
+  set globalHotkeyEnabled(bool v) => unawaited(_set('hotkey.enabled', v ? '1' : '0'));
+
   String? raw(String key) => _values[key];
   Future<void> setRaw(String key, String value) => _set(key, value);
 }

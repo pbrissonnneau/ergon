@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import '../domain/agenda.dart';
 import '../services/notifications/local_notifications_gateway.dart';
 import '../services/notifications/notification_gateway.dart';
@@ -47,6 +49,12 @@ abstract class PlatformIntegration {
 
   /// Shows / hides the desktop overlay (no-op where unsupported).
   Future<void> setOverlayVisible(bool visible) async {}
+
+  /// Default folder for automatic backups (user-visible where possible).
+  Future<Directory> defaultBackupFolder(Directory dataDir) async => Directory(p.join(dataDir.path, 'backups'));
+
+  /// Restarts the application (used to finish restoring a backup).
+  Future<void> restartApp() async => exit(0);
 
   /// Login autostart of the overlay; null when unsupported.
   Future<bool?> overlayAutostartEnabled() async => null;

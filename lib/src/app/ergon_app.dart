@@ -19,6 +19,7 @@ class ErgonApp extends StatefulWidget {
 
 class _ErgonAppState extends State<ErgonApp> with WidgetsBindingObserver {
   StreamSubscription<int>? _openSub;
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
   StreamSubscription<void>? _addSub;
 
   AppServices get s => widget.services;
@@ -28,6 +29,14 @@ class _ErgonAppState extends State<ErgonApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _openSub = s.openTaskRequests.listen(_openTask);
+    final message = s.startupMessage;
+    if (message != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _messenger.currentState?.showSnackBar(
+          SnackBar(content: Text(message), duration: const Duration(seconds: 8)),
+        ),
+      );
+    }
     _addSub = s.platform.quickAddRequests.listen((_) => HomeShell.globalKey.currentState?.quickAdd());
   }
 
@@ -66,6 +75,7 @@ class _ErgonAppState extends State<ErgonApp> with WidgetsBindingObserver {
         listenable: s.settings,
         builder: (context, _) => MaterialApp(
           title: 'Ergon',
+          scaffoldMessengerKey: _messenger,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
