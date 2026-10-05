@@ -6,6 +6,7 @@ import 'package:ergon/src/domain/enums.dart';
 import 'package:ergon/src/domain/models.dart';
 import 'package:ergon/src/platform/platform_integration.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -26,29 +27,52 @@ void main() {
     await settle(tester);
   }
 
-  testWidgets('empty agenda, quick add, complete with undo', (tester) async {
+  testWidgets('quick add with description; completed task stays (green) until removed', (tester) async {
     await boot(tester);
     expect(find.text('All clear for today'), findsOneWidget);
 
-    // Quick add with Ctrl+N style button in the rail; due today by default on the agenda.
+    // Quick add from the rail; due today by default on the agenda.
     await tester.tap(find.byTooltip('New task (Ctrl+N)').first);
     await settle(tester);
-    await tester.enterText(find.byType(TextField).last, 'Submit tax documents');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.enterText(find.widgetWithText(TextField, 'What needs to be done?'), 'Submit tax documents');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Description (optional, Markdown supported)'),
+      'Bring receipts',
+    );
+    // Ctrl+Enter saves, even from the multi-line description.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await settle(tester);
 
     expect(find.text('Submit tax documents'), findsOneWidget);
-    expect(find.text('TODAY'), findsOneWidget);
+    final created = await tester.runAsync(() => services.tasks.getTask(1));
+    expect(created!.description, 'Bring receipts');
 
     await tester.tap(find.bySemanticsLabel('Mark as completed').first);
     await settle(tester);
     final task = await tester.runAsync(() => services.tasks.getTask(1));
     expect(task!.status, TaskStatus.completed);
-    expect(find.text('Submit tax documents'), findsNothing, reason: 'completed work leaves the agenda');
+    expect(find.text('Submit tax documents'), findsOneWidget, reason: 'completed work stays visible today');
+    expect(find.byTooltip('Remove from agenda'), findsOneWidget);
 
-    await tester.tap(find.text('Undo'));
+    await tester.tap(find.textContaining('Clear completed'));
     await settle(tester);
-    expect(find.text('Submit tax documents'), findsOneWidget);
+    expect(find.text('Submit tax documents'), findsNothing);
+    await tester.runAsync(() => services.db.close());
+  });
+
+  testWidgets('"More options" without a title opens the full editor', (tester) async {
+    await boot(tester);
+    await tester.tap(find.byTooltip('New task (Ctrl+N)').first);
+    await settle(tester);
+    await tester.tap(find.text('More options'));
+    await settle(tester);
+    expect(find.text('Description'), findsOneWidget, reason: 'editor is open');
+    await tester.enterText(find.widgetWithText(TextField, 'Task title'), 'Renew passport');
+    await settle(tester, rounds: 6);
+    final t = await tester.runAsync(() => services.tasks.getTask(1));
+    expect(t!.title, 'Renew passport');
     await tester.runAsync(() => services.db.close());
   });
 

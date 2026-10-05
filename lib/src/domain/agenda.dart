@@ -30,6 +30,9 @@ class AgendaEntry {
   int? get minute => occurrence != null ? occurrence!.dueMinute : task.dueMinute;
   TaskStatus get status => occurrence?.status ?? task.status;
 
+  /// Completed today: still shown (as done) until archived or tomorrow.
+  bool get isDone => status == TaskStatus.completed;
+
   /// Stable key for list diffing.
   String get key => occurrence != null ? 'o${task.id}_${occurrence!.date.epochDay}' : 't${task.id}';
 }
@@ -41,6 +44,9 @@ class AgendaSection {
 
   /// Day of an upcoming section.
   final LocalDate? date;
+
+  /// Entries still to do (completed ones are shown but not counted).
+  int get openCount => entries.where((e) => !e.isDone).length;
 
   bool get isTodayGroup =>
       kind == AgendaSectionKind.todayUrgent ||
@@ -60,8 +66,12 @@ class Agenda {
   AgendaSection? get overdue => sections.where((s) => s.kind == AgendaSectionKind.overdue).firstOrNull;
   Iterable<AgendaSection> get upcoming => sections.where((s) => s.kind == AgendaSectionKind.upcoming);
 
-  int get todayCount => todaySections.fold(0, (n, s) => n + s.entries.length);
-  int get overdueCount => overdue?.entries.length ?? 0;
+  /// Open entries due today (completed ones are not counted).
+  int get todayCount => todaySections.fold(0, (n, s) => n + s.openCount);
+  int get overdueCount => overdue?.openCount ?? 0;
+
+  /// Entries completed today that are still displayed.
+  int get completedCount => sections.fold(0, (n, s) => n + s.entries.where((e) => e.isDone).length);
   bool get isEmpty => sections.every((s) => s.entries.isEmpty);
 }
 
@@ -83,7 +93,9 @@ abstract final class AgendaBuilder {
 
     for (final item in tasks) {
       final t = item.task;
-      if (!t.status.isAgendaVisible || t.type == TaskType.recurring) continue;
+      // Completed tasks only reach here when done today and not archived.
+      final shown = t.status.isAgendaVisible || t.status == TaskStatus.completed;
+      if (!shown || t.type == TaskType.recurring) continue;
       final entry = AgendaEntry(item: item);
       final due = t.dueDate;
       if (due == null) {
@@ -103,9 +115,14 @@ abstract final class AgendaBuilder {
     final missedByTask = <int, List<(TaskListItem, Occurrence)>>{};
     for (final pair in occurrences) {
       final (item, occ) = pair;
-      if (!occ.status.isAgendaVisible || !item.task.status.isAgendaVisible) continue;
+      final done = occ.status == TaskStatus.completed;
+      if ((!occ.status.isAgendaVisible && !done) || !item.task.status.isAgendaVisible) continue;
       if (occ.date < today) {
-        missedByTask.putIfAbsent(item.task.id, () => []).add(pair);
+        if (done) {
+          overdue.add(AgendaEntry(item: item, occurrence: occ)); // caught up today
+        } else {
+          missedByTask.putIfAbsent(item.task.id, () => []).add(pair);
+        }
       } else if (occ.date == today) {
         final e = AgendaEntry(item: item, occurrence: occ);
         (item.task.priority == TaskPriority.urgent ? urgent : recurring).add(e);

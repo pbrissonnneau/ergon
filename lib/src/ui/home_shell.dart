@@ -22,6 +22,7 @@ class HomeShell extends StatefulWidget {
 
 class HomeShellState extends State<HomeShell> {
   int _index = 0;
+  final _visited = <int>{};
   final _searchFocus = FocusNode();
   late final _navigators = List.generate(4, (_) => GlobalKey<NavigatorState>());
 
@@ -47,9 +48,20 @@ class HomeShellState extends State<HomeShell> {
     if (i == 1) WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
   }
 
+  /// Projects currently open in the Projects tab (innermost last), so that
+  /// "New task" creates the task inside the project being viewed.
+  final List<int> _openProjects = [];
+  void projectOpened(int id) => _openProjects.add(id);
+  void projectClosed(int id) => _openProjects.remove(id);
+
   void quickAdd() {
     final ctx = _navigators[_index].currentContext ?? context;
-    QuickAdd.show(ctx, due: _index == 0 ? AppScope.of(context).today.value : null);
+    final project = _index == 2 && _openProjects.isNotEmpty ? _openProjects.last : null;
+    QuickAdd.show(
+      ctx,
+      due: _index == 0 ? AppScope.of(context).today.value : null,
+      projectId: project != null && project >= 0 ? project : null,
+    );
   }
 
   Widget _tab(int i) {
@@ -68,8 +80,15 @@ class HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 760;
-    final body = IndexedStack(index: _index, children: [for (var i = 0; i < 4; i++) _tab(i)]);
-    final fab = _index < 3
+    // Tabs are built lazily on first visit (faster start-up), then kept alive
+    // so switching back is instant.
+    _visited.add(_index);
+    final body = IndexedStack(
+      index: _index,
+      children: [for (var i = 0; i < 4; i++) _visited.contains(i) ? _tab(i) : const SizedBox.shrink()],
+    );
+    // Projects provide their own buttons (new project / new task in project).
+    final fab = _index < 2
         ? FloatingActionButton(tooltip: 'New task (Ctrl+N)', onPressed: quickAdd, child: const Icon(Icons.add))
         : null;
 

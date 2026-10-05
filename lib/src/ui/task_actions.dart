@@ -10,8 +10,8 @@ import 'widgets/live_query.dart';
 
 /// Shared task operations used by the agenda, lists and the editor.
 abstract final class TaskActions {
-  static Future<void> open(BuildContext context, int taskId) =>
-      Navigator.of(context).push(TaskEditorPage.route(taskId));
+  static Future<void> open(BuildContext context, int taskId, {bool isNew = false}) =>
+      Navigator.of(context).push(TaskEditorPage.route(taskId, isNew: isNew));
 
   /// Toggles completion of a task or of one occurrence, with Undo.
   static Future<void> toggleComplete(BuildContext context, Task task, {Occurrence? occurrence}) async {
@@ -190,7 +190,7 @@ class _QuickActionsSheet extends StatelessWidget {
               ),
             ),
             if (!task.isSubtask) ...[
-              label('Project'),
+              label('Move to project'),
               LiveQuery<List<Project>>(
                 id: 'projects',
                 stream: s.projects.watchAll,

@@ -49,27 +49,34 @@ class _QuickAddForm extends StatefulWidget {
 
 class _QuickAddFormState extends State<_QuickAddForm> {
   final _title = TextEditingController();
+  final _description = TextEditingController();
+  final _titleFocus = FocusNode();
+  bool _titleMissing = false;
   late LocalDate? _due = widget.due;
   late int? _projectId = widget.projectId;
   TaskPriority _priority = TaskPriority.normal;
   TaskType _type = TaskType.oneTime;
   bool _busy = false;
-  int _added = 0;
 
   @override
   void dispose() {
     _title.dispose();
+    _description.dispose();
+    _titleFocus.dispose();
     super.dispose();
   }
 
-  Future<int?> _create() async {
+  /// Creates the task. With [allowEmptyTitle] ("More options" before typing a
+  /// title) the editor opens on an untitled task and asks for the title there.
+  Future<int?> _create({bool allowEmptyTitle = false}) async {
     final title = _title.text.trim();
-    if (title.isEmpty || _busy) return null;
+    if ((title.isEmpty && !allowEmptyTitle) || _busy) return null;
     _busy = true;
     try {
       return await AppScope.of(context).tasks.createTask(
         TaskDraft(
           title: title,
+          description: _description.text.trim(),
           dueDate: _due,
           projectId: _projectId,
           priority: _priority,
@@ -82,24 +89,25 @@ class _QuickAddFormState extends State<_QuickAddForm> {
     }
   }
 
-  Future<void> _submit({bool keepOpen = false}) async {
+  Future<void> _submit() async {
+    if (_title.text.trim().isEmpty) {
+      setState(() => _titleMissing = true);
+      _titleFocus.requestFocus();
+      return;
+    }
     final id = await _create();
     if (id == null || !mounted) return;
-    if (keepOpen) {
-      setState(() {
-        _added++;
-        _title.clear();
-      });
-    } else {
-      Navigator.of(context).pop();
-    }
+    Navigator.of(context).pop();
   }
 
   Future<void> _moreOptions() async {
-    final id = await _create();
+    final hadTitle = _title.text.trim().isNotEmpty;
+    final id = await _create(allowEmptyTitle: true);
     if (!mounted) return;
     Navigator.of(context).pop();
-    if (id != null && widget.hostContext.mounted) await TaskActions.open(widget.hostContext, id);
+    if (id != null && widget.hostContext.mounted) {
+      await TaskActions.open(widget.hostContext, id, isNew: !hadTitle);
+    }
   }
 
   @override
@@ -107,150 +115,177 @@ class _QuickAddFormState extends State<_QuickAddForm> {
     final s = AppScope.of(context);
     final today = s.clock.today();
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(widget.parentId == null ? 'New task' : 'New subtask', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          CallbackShortcuts(
-            bindings: {const SingleActivator(LogicalKeyboardKey.enter, control: true): () => _submit(keepOpen: true)},
-            child: TextField(
+    // Ctrl+Enter (Cmd+Enter on macOS) saves from anywhere in the form,
+    // including the multi-line description where Enter adds a new line.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): _submit,
+        const SingleActivator(LogicalKeyboardKey.numpadEnter, control: true): _submit,
+        const SingleActivator(LogicalKeyboardKey.enter, meta: true): _submit,
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.parentId == null ? 'New task' : 'New subtask', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            TextField(
               controller: _title,
+              focusNode: _titleFocus,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(hintText: 'What needs to be done?', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                hintText: 'What needs to be done?',
+                border: const OutlineInputBorder(),
+                errorText: _titleMissing ? 'Enter a title' : null,
+              ),
+              onChanged: (_) {
+                if (_titleMissing) setState(() => _titleMissing = false);
+              },
               onSubmitted: (_) => _submit(),
             ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              ChoiceChip(
-                label: const Text('No date'),
-                selected: _due == null,
-                onSelected: (_) => setState(() => _due = null),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _description,
+              minLines: 2,
+              maxLines: 6,
+              keyboardType: TextInputType.multiline,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                hintText: 'Description (optional, Markdown supported)',
+                helperText: 'Ctrl+Enter to save',
+                border: OutlineInputBorder(),
               ),
-              ChoiceChip(
-                label: const Text('Today'),
-                selected: _due == today,
-                onSelected: (_) => setState(() => _due = today),
-              ),
-              ChoiceChip(
-                label: const Text('Tomorrow'),
-                selected: _due == today.addDays(1),
-                onSelected: (_) => setState(() => _due = today.addDays(1)),
-              ),
-              ActionChip(
-                avatar: const Icon(Icons.event, size: 18),
-                label: Text(
-                  _due != null && _due != today && _due != today.addDays(1) ? Fmt.date(_due!, today) : 'Pick…',
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ChoiceChip(
+                  label: const Text('No date'),
+                  selected: _due == null,
+                  onSelected: (_) => setState(() => _due = null),
                 ),
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: (_due ?? today).atMinute(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) setState(() => _due = LocalDate.fromDateTime(picked));
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              PopupMenuButton<TaskPriority>(
-                tooltip: 'Priority',
-                initialValue: _priority,
-                onSelected: (p) => setState(() => _priority = p),
-                itemBuilder: (_) => [
-                  for (final p in TaskPriority.values)
-                    PopupMenuItem(
-                      value: p,
-                      child: Row(
-                        children: [
-                          Icon(AppTheme.priorityIcon(p), color: AppTheme.priorityColor(p, scheme)),
-                          const SizedBox(width: 8),
-                          Text(p.label),
-                        ],
-                      ),
-                    ),
-                ],
-                child: Chip(
-                  avatar: Icon(
-                    AppTheme.priorityIcon(_priority),
-                    size: 18,
-                    color: AppTheme.priorityColor(_priority, scheme),
+                ChoiceChip(
+                  label: const Text('Today'),
+                  selected: _due == today,
+                  onSelected: (_) => setState(() => _due = today),
+                ),
+                ChoiceChip(
+                  label: const Text('Tomorrow'),
+                  selected: _due == today.addDays(1),
+                  onSelected: (_) => setState(() => _due = today.addDays(1)),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.event, size: 18),
+                  label: Text(
+                    _due != null && _due != today && _due != today.addDays(1) ? Fmt.date(_due!, today) : 'Pick…',
                   ),
-                  label: Text(_priority.label),
-                ),
-              ),
-              if (widget.parentId == null)
-                PopupMenuButton<TaskType>(
-                  tooltip: 'Type',
-                  initialValue: _type,
-                  onSelected: (t) => setState(() => _type = t),
-                  itemBuilder: (_) => [
-                    for (final t in [TaskType.oneTime, TaskType.ongoing]) PopupMenuItem(value: t, child: Text(t.label)),
-                  ],
-                  child: Chip(avatar: Icon(AppTheme.typeIcon(_type), size: 18), label: Text(_type.label)),
-                ),
-              if (widget.parentId == null)
-                LiveQuery<List<Project>>(
-                  id: 'projects',
-                  stream: s.projects.watchAll,
-                  builder: (context, data) {
-                    final projects = data ?? const <Project>[];
-                    final current = projects.where((p) => p.id == _projectId).firstOrNull;
-                    return PopupMenuButton<int>(
-                      tooltip: 'Project',
-                      onSelected: (id) => setState(() => _projectId = id == -1 ? null : id),
-                      itemBuilder: (_) => [
-                        const PopupMenuItem(value: -1, child: Text('No project')),
-                        for (final p in projects)
-                          PopupMenuItem(
-                            value: p.id,
-                            child: Row(
-                              children: [
-                                CircleAvatar(radius: 6, backgroundColor: Color(p.color)),
-                                const SizedBox(width: 8),
-                                Text(p.name),
-                              ],
-                            ),
-                          ),
-                      ],
-                      child: Chip(
-                        avatar: current == null
-                            ? const Icon(Icons.folder_outlined, size: 18)
-                            : CircleAvatar(radius: 6, backgroundColor: Color(current.color)),
-                        label: Text(current?.name ?? 'No project'),
-                      ),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: (_due ?? today).atMinute(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
+                    if (picked != null) setState(() => _due = LocalDate.fromDateTime(picked));
                   },
                 ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              if (_added > 0) Text('$_added added', style: TextStyle(color: scheme.outline)),
-              const Spacer(),
-              TextButton(onPressed: _moreOptions, child: const Text('More options')),
-              const SizedBox(width: 8),
-              FilledButton(onPressed: _submit, child: const Text('Add')),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                PopupMenuButton<TaskPriority>(
+                  tooltip: 'Priority',
+                  initialValue: _priority,
+                  onSelected: (p) => setState(() => _priority = p),
+                  itemBuilder: (_) => [
+                    for (final p in TaskPriority.values)
+                      PopupMenuItem(
+                        value: p,
+                        child: Row(
+                          children: [
+                            Icon(AppTheme.priorityIcon(p), color: AppTheme.priorityColor(p, scheme)),
+                            const SizedBox(width: 8),
+                            Text(p.label),
+                          ],
+                        ),
+                      ),
+                  ],
+                  child: Chip(
+                    avatar: Icon(
+                      AppTheme.priorityIcon(_priority),
+                      size: 18,
+                      color: AppTheme.priorityColor(_priority, scheme),
+                    ),
+                    label: Text(_priority.label),
+                  ),
+                ),
+                if (widget.parentId == null)
+                  PopupMenuButton<TaskType>(
+                    tooltip: 'Type',
+                    initialValue: _type,
+                    onSelected: (t) => setState(() => _type = t),
+                    itemBuilder: (_) => [
+                      for (final t in [TaskType.oneTime, TaskType.ongoing])
+                        PopupMenuItem(value: t, child: Text(t.label)),
+                    ],
+                    child: Chip(avatar: Icon(AppTheme.typeIcon(_type), size: 18), label: Text(_type.label)),
+                  ),
+                if (widget.parentId == null)
+                  LiveQuery<List<Project>>(
+                    id: 'projects',
+                    stream: s.projects.watchAll,
+                    builder: (context, data) {
+                      final projects = data ?? const <Project>[];
+                      final current = projects.where((p) => p.id == _projectId).firstOrNull;
+                      return PopupMenuButton<int>(
+                        tooltip: 'Project',
+                        onSelected: (id) => setState(() => _projectId = id == -1 ? null : id),
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(value: -1, child: Text('No project')),
+                          for (final p in projects)
+                            PopupMenuItem(
+                              value: p.id,
+                              child: Row(
+                                children: [
+                                  CircleAvatar(radius: 6, backgroundColor: Color(p.color)),
+                                  const SizedBox(width: 8),
+                                  Text(p.name),
+                                ],
+                              ),
+                            ),
+                        ],
+                        child: Chip(
+                          avatar: current == null
+                              ? const Icon(Icons.folder_outlined, size: 18)
+                              : CircleAvatar(radius: 6, backgroundColor: Color(current.color)),
+                          label: Text(current?.name ?? 'No project'),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Spacer(),
+                TextButton(onPressed: _moreOptions, child: const Text('More options')),
+                const SizedBox(width: 8),
+                FilledButton(onPressed: _submit, child: const Text('Add')),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../app/app_services.dart';
 import '../../core/local_date.dart';
+import '../../data/task_repository.dart';
 import '../../domain/enums.dart';
 import '../../domain/models.dart';
 import '../../domain/recurrence.dart';
@@ -21,11 +22,15 @@ import '../widgets/live_query.dart';
 /// Full task editor. Every change is saved immediately (text fields are
 /// debounced), so there is no Save button and nothing can be lost.
 class TaskEditorPage extends StatefulWidget {
-  const TaskEditorPage({super.key, required this.taskId});
+  const TaskEditorPage({super.key, required this.taskId, this.isNew = false});
   final int taskId;
 
-  static Route<void> route(int taskId) => MaterialPageRoute<void>(
-    builder: (_) => TaskEditorPage(taskId: taskId),
+  /// Created untitled from "More options": focus the title, and discard the
+  /// task if the user leaves without entering anything.
+  final bool isNew;
+
+  static Route<void> route(int taskId, {bool isNew = false}) => MaterialPageRoute<void>(
+    builder: (_) => TaskEditorPage(taskId: taskId, isNew: isNew),
     settings: RouteSettings(name: '/task/$taskId'),
   );
 
@@ -84,7 +89,13 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
   @override
   void dispose() {
     _textDebounce?.cancel();
-    if (_pendingText) unawaited(_save());
+    final saved = _pendingText ? _save() : Future<void>.value();
+    if (widget.isNew && _title.text.trim().isEmpty) {
+      final tasks = _s.tasks, id = widget.taskId, description = _description.text;
+      unawaited(saved.then((_) => _discardIfEmpty(tasks, id, description)));
+    } else {
+      unawaited(saved);
+    }
     _sub?.cancel();
     _title.dispose();
     _description.dispose();
@@ -92,6 +103,25 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
   }
 
   bool _pendingText = false;
+
+  /// An untitled new task is deleted when nothing was entered; otherwise it
+  /// is kept with a placeholder title so no work is lost.
+  static Future<void> _discardIfEmpty(TaskRepository tasks, int id, String description) async {
+    final subtasks = await tasks.watchSubtasks(id).first;
+    final reminders = await tasks.getReminders(id);
+    if (description.trim().isEmpty && subtasks.isEmpty && reminders.isEmpty) {
+      await tasks.deleteTask(id);
+    } else {
+      await tasks.rename(id, 'Untitled task');
+    }
+  }
+
+  /// Saves pending edits and closes the editor (Ctrl+Enter).
+  Future<void> _saveAndClose() async {
+    _textDebounce?.cancel();
+    if (_pendingText) await _save();
+    if (mounted) await Navigator.of(context).maybePop();
+  }
 
   void _onTextChanged() {
     _pendingText = true;
@@ -134,7 +164,13 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
     final today = _s.clock.today();
 
     return CallbackShortcuts(
-      bindings: {const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.of(context).maybePop()},
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.of(context).maybePop(),
+        // Ctrl+Enter saves and closes, also from the multi-line description.
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): _saveAndClose,
+        const SingleActivator(LogicalKeyboardKey.numpadEnter, control: true): _saveAndClose,
+        const SingleActivator(LogicalKeyboardKey.enter, meta: true): _saveAndClose,
+      },
       child: Scaffold(
         appBar: AppBar(
           title: _Breadcrumb(ancestry: _ancestry),
@@ -164,6 +200,7 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
               children: [
                 TextField(
                   controller: _title,
+                  autofocus: widget.isNew,
                   style: Theme.of(context).textTheme.headlineSmall,
                   maxLines: null,
                   textCapitalization: TextCapitalization.sentences,

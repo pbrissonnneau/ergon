@@ -27,16 +27,16 @@ class AgendaService {
     }
 
     controller = StreamController<Agenda>(
-      onListen: () async {
-        // Make sure today's recurring occurrences exist before the first build.
-        try {
-          await tasks.materializeAll();
-        } catch (_) {}
-        s1 = tasks.watchAgendaTasks(end).listen((v) {
+      onListen: () {
+        // Subscribe immediately for the fastest first paint; materialising
+        // today's recurring occurrences runs in parallel and the live queries
+        // pick up the inserted rows automatically.
+        tasks.materializeAll().catchError((_) {});
+        s1 = tasks.watchAgendaTasks(end, today: today).listen((v) {
           lastTasks = v;
           emit();
         }, onError: controller.addError);
-        s2 = tasks.watchAgendaOccurrences(end).listen((v) {
+        s2 = tasks.watchAgendaOccurrences(end, today: today).listen((v) {
           lastOcc = v;
           emit();
         }, onError: controller.addError);

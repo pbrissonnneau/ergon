@@ -333,11 +333,17 @@ class _OverlayList extends StatelessWidget {
                     width: 4,
                     height: 16,
                     decoration: BoxDecoration(
-                      color: AppTheme.priorityColor(e.task.priority, scheme),
+                      color: AppTheme.projectColor(e.item.projectColor, scheme),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (e.task.priority.code >= TaskPriority.high.code && !e.isDone)
+                    Icon(
+                      AppTheme.priorityIcon(e.task.priority),
+                      size: 13,
+                      color: AppTheme.priorityColor(e.task.priority, scheme),
+                    ),
                   if (e.isOccurrence) ...[
                     Icon(Icons.repeat, size: 13, color: scheme.outline),
                     const SizedBox(width: 4),
@@ -347,7 +353,10 @@ class _OverlayList extends StatelessWidget {
                       e.task.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(color: overdue ? scheme.error : null),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: e.isDone ? scheme.outline : (overdue ? scheme.error : null),
+                        decoration: e.isDone ? TextDecoration.lineThrough : null,
+                      ),
                     ),
                   ),
                   if (e.minute != null)

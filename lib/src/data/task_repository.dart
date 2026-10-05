@@ -28,6 +28,12 @@ class TaskRepository {
   static const _agendaStatuses = '(0,1,4,5)';
   static const _closedStatuses = '(2,6)';
 
+  /// Completed today (bound as ?1) and not removed from the agenda.
+  static const _doneTodayTask = '(t.status = 2 AND t.archived_at IS NULL AND t.completed_at >= ?1)';
+
+  /// UTC millis of local midnight starting [day].
+  static int _startOfDayMs(LocalDate day) => day.atMinute(0).toUtc().millisecondsSinceEpoch;
+
   /// Columns appended to `t.*` for list rows.
   static const _listColumns = '''
     t.*, p.name AS p_name, p.color AS p_color, par.title AS parent_title,
@@ -184,27 +190,34 @@ class TaskRepository {
 
   /// Candidates for the agenda: open non-recurring tasks due up to [end] and
   /// all open ongoing tasks.
-  Stream<List<TaskListItem>> watchAgendaTasks(LocalDate end) => db
+  ///
+  /// Tasks completed since the start of [today] that were not archived stay
+  /// listed (shown as done) until the next day or until the user removes them.
+  Stream<List<TaskListItem>> watchAgendaTasks(LocalDate end, {required LocalDate today}) => db
       .customSelect(
         'SELECT $_listColumns $_listJoins '
-        'WHERE t.status IN $_agendaStatuses AND t.type != 2 '
-        'AND ((t.due_date IS NOT NULL AND t.due_date <= ?) OR t.type = 1) '
-        'AND (t.parent_id IS NULL OR par.status IN $_agendaStatuses)',
-        variables: [Variable.withInt(end.epochDay)],
+        'WHERE (t.status IN $_agendaStatuses OR $_doneTodayTask) AND t.type != 2 '
+        'AND ((t.due_date IS NOT NULL AND t.due_date <= ?2) OR t.type = 1) '
+        'AND (t.parent_id IS NULL OR par.status IN $_agendaStatuses '
+        'OR (par.status = 2 AND par.archived_at IS NULL AND par.completed_at >= ?1))',
+        variables: [Variable.withInt(_startOfDayMs(today)), Variable.withInt(end.epochDay)],
         readsFrom: {db.tasks, db.projects},
       )
       .watch()
       .map((rows) => rows.map(_listItem).toList());
 
-  /// Open occurrences up to [end] of open recurring tasks.
-  Stream<List<(TaskListItem, Occurrence)>> watchAgendaOccurrences(LocalDate end) => db
+  /// Open (or completed today and not archived) occurrences up to [end] of
+  /// open recurring tasks.
+  Stream<List<(TaskListItem, Occurrence)>> watchAgendaOccurrences(LocalDate end, {required LocalDate today}) => db
       .customSelect(
         'SELECT $_listColumns, o.id AS o_id, o.date AS o_date, o.due_minute AS o_due_minute, '
         'o.status AS o_status '
         'FROM occurrences o JOIN tasks t ON t.id = o.task_id '
         'LEFT JOIN projects p ON p.id = t.project_id LEFT JOIN tasks par ON par.id = t.parent_id '
-        'WHERE o.status IN $_agendaStatuses AND o.date <= ? AND t.status IN $_agendaStatuses',
-        variables: [Variable.withInt(end.epochDay)],
+        'WHERE (o.status IN $_agendaStatuses '
+        'OR (o.status = 2 AND o.archived_at IS NULL AND o.completed_at >= ?1)) '
+        'AND o.date <= ?2 AND t.status IN $_agendaStatuses',
+        variables: [Variable.withInt(_startOfDayMs(today)), Variable.withInt(end.epochDay)],
         readsFrom: {db.tasks, db.projects, db.occurrences},
       )
       .watch()
@@ -355,12 +368,34 @@ class TaskRepository {
         status: Value(status.code),
         updatedAt: Value(now),
         completedAt: Value(_completedAt(old, status, now)),
+        // Re-opened or re-completed work shows up on the agenda again.
+        archivedAt: const Value(null),
       ),
     );
     if (status.isClosed) {
       // Pending snoozes of a closed task are pointless.
       await (db.delete(db.reminders)..where((r) => r.taskId.equals(id) & r.kind.equals(ReminderKind.snooze.code))).go();
     }
+  });
+
+  /// Removes a completed task from the agenda now instead of tomorrow.
+  Future<void> archiveTask(int id) =>
+      (db.update(db.tasks)..where((t) => t.id.equals(id))).write(TasksCompanion(archivedAt: Value(_now)));
+
+  /// Removes a completed occurrence from the agenda now instead of tomorrow.
+  Future<void> archiveOccurrence(int taskId, LocalDate date) =>
+      (db.update(db.occurrences)..where((o) => o.taskId.equals(taskId) & o.date.equals(date.epochDay))).write(
+        OccurrencesCompanion(archivedAt: Value(_now)),
+      );
+
+  /// Removes everything completed (tasks and occurrences) from the agenda.
+  Future<void> archiveAllCompleted() => db.transaction(() async {
+    final now = _now;
+    await (db.update(db.tasks)..where((t) => t.status.equals(TaskStatus.completed.code) & t.archivedAt.isNull())).write(
+      TasksCompanion(archivedAt: Value(now)),
+    );
+    await (db.update(db.occurrences)..where((o) => o.status.equals(TaskStatus.completed.code) & o.archivedAt.isNull()))
+        .write(OccurrencesCompanion(archivedAt: Value(now)));
   });
 
   Future<void> setPriority(int id, TaskPriority priority) => (db.update(
@@ -458,9 +493,10 @@ class TaskRepository {
           updatedAt: Value(now),
           completedAt: Value(
             status == TaskStatus.completed
-                ? (existing.completedAt ?? now)
+                ? (existing.status == TaskStatus.completed.code ? (existing.completedAt ?? now) : now)
                 : (status == TaskStatus.cancelled ? now : null),
           ),
+          archivedAt: const Value(null),
         ),
       );
     }

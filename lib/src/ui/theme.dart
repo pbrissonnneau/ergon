@@ -33,6 +33,9 @@ abstract final class AppTheme {
     );
   }
 
+  /// A task's project colour (neutral when it has no project).
+  static Color projectColor(int? color, ColorScheme s) => color == null ? s.outlineVariant : Color(color);
+
   static Color priorityColor(TaskPriority p, ColorScheme s) => switch (p) {
     TaskPriority.low => s.outline,
     TaskPriority.normal => s.primary,

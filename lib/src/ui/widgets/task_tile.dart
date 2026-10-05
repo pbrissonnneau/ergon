@@ -23,6 +23,7 @@ class TaskTile extends StatelessWidget {
     this.expanded,
     this.onToggleExpanded,
     this.dense = false,
+    this.onRemove,
   });
 
   final TaskListItem item;
@@ -35,6 +36,9 @@ class TaskTile extends StatelessWidget {
   final bool? expanded;
   final VoidCallback? onToggleExpanded;
   final bool dense;
+
+  /// Shown for completed agenda entries: remove from the agenda now.
+  final VoidCallback? onRemove;
 
   Task get task => item.task;
   TaskStatus get status => occurrence?.status ?? task.status;
@@ -86,6 +90,15 @@ class TaskTile extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 4, vertical: dense ? 0 : 2),
         child: Row(
           children: [
+            // Project colour marker (projects are the task's container).
+            Container(
+              width: 4,
+              height: dense ? 28 : 36,
+              decoration: BoxDecoration(
+                color: showProject ? AppTheme.projectColor(item.projectColor, scheme) : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             _CompleteBox(
               status: status,
               priority: task.priority,
@@ -125,6 +138,13 @@ class TaskTile extends StatelessWidget {
                   size: 18,
                   color: AppTheme.priorityColor(task.priority, scheme),
                 ),
+              ),
+            if (onRemove != null)
+              IconButton(
+                tooltip: 'Remove from agenda',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: onRemove,
               ),
             if (onToggleExpanded != null && item.subtaskCount > 0)
               IconButton(
@@ -228,12 +248,14 @@ class ExpandableTaskTile extends StatefulWidget {
     this.occurrence,
     this.missedCount = 0,
     this.showProject = true,
+    this.onRemove,
   });
   final TaskListItem item;
   final Occurrence? occurrence;
   final LocalDate today;
   final int missedCount;
   final bool showProject;
+  final VoidCallback? onRemove;
 
   @override
   State<ExpandableTaskTile> createState() => _ExpandableTaskTileState();
@@ -250,6 +272,7 @@ class _ExpandableTaskTileState extends State<ExpandableTaskTile> {
       today: widget.today,
       missedCount: widget.missedCount,
       showProject: widget.showProject,
+      onRemove: widget.onRemove,
       expanded: _expanded,
       onToggleExpanded: () => setState(() => _expanded = !_expanded),
     );

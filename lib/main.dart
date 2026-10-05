@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/app/app_services.dart';
+import 'src/core/startup_trace.dart';
 import 'src/app/ergon_app.dart';
 import 'src/data/database_opener.dart';
 import 'src/data/task_repository.dart';
@@ -25,6 +26,7 @@ import 'src/ui/overlay/overlay_app.dart';
 ///   ergon --new-task         open the quick-add dialog
 ///   ergon --overlay          run the compact desktop overlay
 Future<void> main(List<String> args) async {
+  StartupTrace.mark('main');
   WidgetsFlutterBinding.ensureInitialized();
   final dataDir = await getApplicationSupportDirectory();
   await dataDir.create(recursive: true);
@@ -57,18 +59,25 @@ Future<void> main(List<String> args) async {
       ..mainChannel = channel
       ..launchTaskId = openTask
       ..launchQuickAdd = args.contains('--new-task');
-    await windowManager.ensureInitialized();
-    await windowManager.waitUntilReadyToShow(const WindowOptions(title: 'Ergon', minimumSize: Size(380, 480)));
   }
 
   // Android: notification actions tapped while the app is not running.
   notificationBackgroundEntryPoint = notificationBackgroundHandler;
 
-  final services = await AppServices.open(dataDir, platform);
+  // Open the database (background isolate) while the window is configured.
+  final servicesFuture = AppServices.open(dataDir, platform);
+  if (platform.isDesktop) {
+    await windowManager.ensureInitialized();
+    // The native runner shows the window on the first Flutter frame.
+    unawaited(windowManager.setMinimumSize(const Size(380, 480)));
+  }
+  final services = await servicesFuture;
+  StartupTrace.mark('services');
   runApp(ErgonApp(services: services, dataPath: dataDir.path));
 
   // Everything else happens after the first frame so start-up stays instant.
   WidgetsBinding.instance.addPostFrameCallback((_) async {
+    StartupTrace.mark('first-frame');
     await services.startBackground(watchExternalChanges: platform.isDesktop);
     if (platform.supportsOverlay && services.settings.overlayEnabled) {
       unawaited(platform.setOverlayVisible(true));

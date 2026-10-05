@@ -13,6 +13,12 @@ class ProjectsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'new-project',
+        onPressed: () => editProject(context),
+        icon: const Icon(Icons.create_new_folder_outlined),
+        label: const Text('New project'),
+      ),
       appBar: AppBar(
         title: const Text('Projects'),
         actions: [

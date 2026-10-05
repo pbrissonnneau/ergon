@@ -122,7 +122,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.all(12),
-                hintText: 'Add a description (Markdown supported)',
+                hintText: 'Add a description (Markdown supported) — Ctrl+Enter saves and closes',
               ),
             ),
         ],

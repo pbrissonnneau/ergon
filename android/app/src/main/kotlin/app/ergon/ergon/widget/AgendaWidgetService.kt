@@ -45,7 +45,8 @@ class AgendaWidgetService : RemoteViewsService() {
                 else -> ""
             }
             views.setTextViewText(R.id.item_meta, meta)
-            views.setInt(R.id.item_bar, "setColorFilter", priorityColor(item.priority))
+            // Bar = project colour; tasks without a project fall back to priority.
+            views.setInt(R.id.item_bar, "setColorFilter", item.color ?: priorityColor(item.priority))
             views.setOnClickFillInIntent(
                 R.id.item_root,
                 Intent().putExtra(MainActivity.EXTRA_TASK_ID, item.id),

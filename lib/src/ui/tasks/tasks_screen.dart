@@ -7,6 +7,8 @@ import '../../domain/enums.dart';
 import '../../domain/models.dart';
 import '../../domain/task_query.dart';
 import '../theme.dart';
+import '../editor/quick_add.dart';
+import '../home_shell.dart';
 import '../widgets/task_tile.dart';
 import '../widgets/live_query.dart';
 
@@ -39,10 +41,14 @@ class _TasksScreenState extends State<TasksScreen> {
   void initState() {
     super.initState();
     _scroll.addListener(_maybeLoadMore);
+    final p = widget.project;
+    if (p != null) HomeShell.globalKey.currentState?.projectOpened(p.id);
   }
 
   @override
   void dispose() {
+    final p = widget.project;
+    if (p != null) HomeShell.globalKey.currentState?.projectClosed(p.id);
     _search.dispose();
     if (widget.searchFocus == null) _focus.dispose();
     _scroll.dispose();
@@ -71,7 +77,17 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
+    final project = widget.project;
     return Scaffold(
+      floatingActionButton: project == null
+          ? null
+          : FloatingActionButton.extended(
+              heroTag: 'project-add-${project.id}',
+              tooltip: 'New task in this project (Ctrl+N)',
+              onPressed: () => QuickAdd.show(context, projectId: project.id >= 0 ? project.id : null),
+              icon: const Icon(Icons.add),
+              label: const Text('New task'),
+            ),
       appBar: AppBar(
         titleSpacing: 12,
         title: widget.project != null

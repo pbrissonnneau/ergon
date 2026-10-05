@@ -8,7 +8,7 @@ import 'database.dart';
 /// [strategy] that only *adds* or *transforms* data (never drops user data),
 /// and add a migration test in `test/data/migration_test.dart`.
 abstract final class Migrations {
-  static const currentVersion = 1;
+  static const currentVersion = 2;
 
   static MigrationStrategy strategy(AppDatabase db) => MigrationStrategy(
     onCreate: (m) async {
@@ -16,13 +16,20 @@ abstract final class Migrations {
       await createSearchIndex(db);
     },
     onUpgrade: (m, from, to) async {
-      // Example for the next version:
-      // if (from < 2) { await m.addColumn(db.tasks, db.tasks.someNewColumn); }
+      if (from < 2) {
+        // v2: completed work stays on the agenda until archived.
+        await m.addColumn(db.tasks, db.tasks.archivedAt);
+        await m.addColumn(db.occurrences, db.occurrences.archivedAt);
+        await m.createIndex(db.idxTasksCompleted);
+      }
     },
     beforeOpen: (details) async {
       await db.customStatement('PRAGMA foreign_keys = ON');
-      // Rebuild the derived search index after any schema change.
-      if (details.hadUpgrade) await rebuildSearchIndex(db);
+      // Ensure and rebuild the derived search index after any upgrade.
+      if (details.hadUpgrade) {
+        await createSearchIndex(db);
+        await rebuildSearchIndex(db);
+      }
     },
   );
 

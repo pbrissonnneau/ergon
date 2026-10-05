@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_services.dart';
 import '../../core/local_date.dart';
+import '../../core/startup_trace.dart';
 import '../../domain/agenda.dart';
 import '../formatting.dart';
 import '../widgets/task_tile.dart';
@@ -48,6 +49,7 @@ class _AgendaBuilderWidgetState extends State<AgendaBuilderWidget> {
     _upcoming = upcoming;
     _sub?.cancel();
     _sub = _s.agenda.watch(today: day, upcomingDays: upcoming).listen((a) {
+      StartupTrace.mark('agenda-data');
       if (mounted) setState(() => _agenda = a);
     });
   }
@@ -89,7 +91,7 @@ List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overd
     rows.add(
       AgendaHeaderRow(
         s.kind.label,
-        count: s.entries.length,
+        count: s.openCount,
         color: s.kind == AgendaSectionKind.todayUrgent ? const Color(0xFFE03131) : null,
       ),
     );
@@ -97,20 +99,18 @@ List<AgendaRow> flattenAgenda(Agenda a, {required ColorScheme scheme, bool overd
   }
   final overdue = a.overdue;
   if (overdue != null) {
-    rows.add(
-      AgendaHeaderRow('Overdue', count: overdue.entries.length, big: true, color: scheme.error, collapsible: true),
-    );
+    rows.add(AgendaHeaderRow('Overdue', count: overdue.openCount, big: true, color: scheme.error, collapsible: true));
     if (!overdueCollapsed) rows.addAll(overdue.entries.map(AgendaEntryRow.new));
   }
   final upcoming = a.upcoming.toList();
   if (upcoming.isNotEmpty) {
-    rows.add(AgendaHeaderRow('Upcoming', count: upcoming.fold<int>(0, (n, s) => n + s.entries.length), big: true));
+    rows.add(AgendaHeaderRow('Upcoming', count: upcoming.fold<int>(0, (n, s) => n + s.openCount), big: true));
     for (final s in upcoming) {
       final d = s.date!;
       rows.add(
         AgendaHeaderRow(
           a.today.daysUntil(d) == 1 ? 'Tomorrow · ${Fmt.longDate(d)}' : Fmt.longDate(d),
-          count: s.entries.length,
+          count: s.openCount,
         ),
       );
       rows.addAll(s.entries.map(AgendaEntryRow.new));
@@ -125,6 +125,18 @@ class AgendaEntryTile extends StatelessWidget {
   final LocalDate today;
 
   @override
-  Widget build(BuildContext context) =>
-      ExpandableTaskTile(item: entry.item, occurrence: entry.occurrence, today: today, missedCount: entry.missedCount);
+  Widget build(BuildContext context) => ExpandableTaskTile(
+    item: entry.item,
+    occurrence: entry.occurrence,
+    today: today,
+    missedCount: entry.missedCount,
+    // Done today: stays visible until tomorrow, unless removed now.
+    onRemove: entry.isDone
+        ? () {
+            final tasks = AppScope.of(context).tasks;
+            final occ = entry.occurrence;
+            occ != null ? tasks.archiveOccurrence(entry.task.id, occ.date) : tasks.archiveTask(entry.task.id);
+          }
+        : null,
+  );
 }

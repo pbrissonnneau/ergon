@@ -13,6 +13,8 @@ data class WidgetItem(
     val priority: Int,
     val ongoing: Boolean,
     val missed: Int,
+    /** Project colour (ARGB), null when the task has no project. */
+    val color: Int?,
 )
 
 /**
@@ -42,6 +44,7 @@ object WidgetStore {
                     priority = o.optInt("p", 1),
                     ongoing = o.optBoolean("o", false),
                     missed = o.optInt("x", 0),
+                    color = if (o.has("c")) o.getLong("c").toInt() else null,
                 )
             }
         } catch (e: Exception) {

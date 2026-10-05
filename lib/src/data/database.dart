@@ -25,6 +25,7 @@ class Projects extends Table {
 @TableIndex(name: 'idx_tasks_project', columns: {#projectId, #status})
 @TableIndex(name: 'idx_tasks_type_status', columns: {#type, #status})
 @TableIndex(name: 'idx_tasks_updated', columns: {#updatedAt})
+@TableIndex(name: 'idx_tasks_completed', columns: {#completedAt})
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get parentId => integer().nullable().references(Tasks, #id, onDelete: KeyAction.cascade)();
@@ -46,6 +47,10 @@ class Tasks extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get completedAt => integer().nullable()();
+
+  /// When a closed task was removed from the agenda (by the user, or
+  /// implicitly the day after completion). Added in schema v2.
+  IntColumn get archivedAt => integer().nullable()();
 }
 
 /// Materialised occurrences of a recurring task. Only a bounded window is
@@ -62,6 +67,9 @@ class Occurrences extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get completedAt => integer().nullable()();
+
+  /// See [Tasks.archivedAt]. Added in schema v2.
+  IntColumn get archivedAt => integer().nullable()();
 }
 
 /// Persisted reminder definitions (see ReminderKind).

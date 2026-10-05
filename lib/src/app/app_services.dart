@@ -57,6 +57,10 @@ class AppServices {
   /// screen rolls over without polling.
   late final ValueNotifier<LocalDate> today = ValueNotifier(clock.today());
   Timer? _midnight;
+  Timer? _reminderStart;
+
+  /// Delay before reminder delivery starts after launch.
+  static const reminderStartDelay = Duration(milliseconds: 800);
   Timer? _externalPoll;
   int? _dataVersion;
 
@@ -86,8 +90,10 @@ class AppServices {
     final initial = await platform.initialTaskToOpen();
     if (initial != null) _openRequests.add(initial);
     unawaited(tasks.materializeAll());
-    unawaited(reminders.start());
     if (watchExternalChanges) startExternalChangeWatcher();
+    // Notification set-up (plugin init, OS permission state, reconciliation)
+    // is not needed for the first screen; give the UI a head start.
+    _reminderStart = Timer(reminderStartDelay, () => unawaited(reminders.start()));
   }
 
   /// Another process (overlay <-> main window) may write the same database.
@@ -109,6 +115,7 @@ class AppServices {
   Future<void> dispose() async {
     _externalPoll?.cancel();
     _midnight?.cancel();
+    _reminderStart?.cancel();
     await reminders.dispose();
     await platform.dispose();
     await db.close();

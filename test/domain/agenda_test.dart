@@ -14,16 +14,18 @@ void main() {
 
   final today = LocalDate(2026, 10, 4);
 
-  Future<Agenda> agenda({int upcoming = 1}) async {
+  Future<Agenda> agendaFor(LocalDate today, {int upcoming = 1}) async {
     await env.tasks.materializeAll();
     final end = today.addDays(upcoming);
     return AgendaBuilder.build(
       today: today,
       upcomingDays: upcoming,
-      tasks: await env.tasks.watchAgendaTasks(end).first,
-      occurrences: await env.tasks.watchAgendaOccurrences(end).first,
+      tasks: await env.tasks.watchAgendaTasks(end, today: today).first,
+      occurrences: await env.tasks.watchAgendaOccurrences(end, today: today).first,
     );
   }
+
+  Future<Agenda> agenda({int upcoming = 1}) => agendaFor(today, upcoming: upcoming);
 
   List<String> titles(Agenda a, AgendaSectionKind k) =>
       a.sections.where((s) => s.kind == k).expand((s) => s.entries).map((e) => e.task.title).toList();
@@ -84,22 +86,75 @@ void main() {
     expect(ups.map((s) => s.date), [today.addDays(1), today.addDays(3)]);
   });
 
-  test('completed, cancelled and suspended work is hidden', () async {
+  test('cancelled and suspended work is hidden; completed stays visible as done today', () async {
     await add('Done', due: today, status: TaskStatus.completed);
     await add('Cancelled', due: today, status: TaskStatus.cancelled);
     await add('Suspended', due: today, status: TaskStatus.suspended);
     await add('Waiting', due: today, status: TaskStatus.waiting);
     await add('Blocked', due: today, status: TaskStatus.blocked);
-    expect(titles(await agenda(), AgendaSectionKind.today), ['Blocked', 'Waiting']);
+    final a = await agenda();
+    expect(titles(a, AgendaSectionKind.today), ['Blocked', 'Done', 'Waiting']);
+    expect(a.todayCount, 2, reason: 'done work is shown but not counted');
+    expect(a.completedCount, 1);
   });
 
-  test('completing an occurrence removes it from today; the series continues', () async {
+  test('a task completed today stays in place until tomorrow (spec #2)', () async {
+    final id = await add('Call the plumber', due: today, p: TaskPriority.high);
+    await add('Review pull requests', due: today);
+    await env.tasks.setStatus(id, TaskStatus.completed);
+    var a = await agenda();
+    expect(titles(a, AgendaSectionKind.today), ['Call the plumber', 'Review pull requests'], reason: 'same position');
+    expect(a.sections.expand((s) => s.entries).first.isDone, isTrue);
+
+    // Next day: completed yesterday => gone; the open task is now overdue.
+    env.clock.current = DateTime(2026, 10, 5, 8);
+    a = await agendaFor(LocalDate(2026, 10, 5));
+    expect(titles(a, AgendaSectionKind.overdue), ['Review pull requests']);
+    expect(a.sections.expand((s) => s.entries).map((e) => e.task.title), isNot(contains('Call the plumber')));
+  });
+
+  test('an unfinished task is never dropped: it moves to Overdue day after day (spec #3)', () async {
+    await add('Submit tax documents', due: today);
+    for (var d = 1; d <= 40; d += 13) {
+      final day = today.addDays(d);
+      env.clock.current = day.atMinute(9 * 60);
+      expect(titles(await agendaFor(day), AgendaSectionKind.overdue), ['Submit tax documents']);
+    }
+  });
+
+  test('the user can remove completed work before tomorrow', () async {
+    final a1 = await add('A', due: today);
+    final a2 = await add('B', due: today);
+    final rec = await add('Learn Spanish', type: TaskType.recurring, rule: RecurrenceRule.daily(today));
+    await env.tasks.setStatus(a1, TaskStatus.completed);
+    await env.tasks.setStatus(a2, TaskStatus.completed);
+    await env.tasks.setOccurrenceStatus(rec, today, TaskStatus.completed);
+    expect((await agenda()).completedCount, 3);
+
+    await env.tasks.archiveTask(a1);
+    expect(titles(await agenda(), AgendaSectionKind.today), ['B']);
+
+    await env.tasks.archiveAllCompleted();
+    final a = await agenda();
+    expect(a.completedCount, 0);
+    expect(titles(a, AgendaSectionKind.recurring), isEmpty);
+
+    // Re-opening brings it back (archive flag is cleared).
+    await env.tasks.setStatus(a1, TaskStatus.notStarted);
+    expect(titles(await agenda(), AgendaSectionKind.today), ['A']);
+  });
+
+  test('completing an occurrence keeps it visible as done today; the series continues', () async {
     final id = await add('Learn Spanish', type: TaskType.recurring, rule: RecurrenceRule.daily(today));
     expect(titles(await agenda(), AgendaSectionKind.recurring), ['Learn Spanish']);
     await env.tasks.setOccurrenceStatus(id, today, TaskStatus.completed);
-    final a = await agenda();
-    expect(titles(a, AgendaSectionKind.recurring), isEmpty);
+    var a = await agenda();
+    expect(a.sections.firstWhere((s) => s.kind == AgendaSectionKind.recurring).entries.single.isDone, isTrue);
     expect(titles(a, AgendaSectionKind.upcoming), ['Learn Spanish']);
+    env.clock.current = DateTime(2026, 10, 5, 8);
+    a = await agendaFor(LocalDate(2026, 10, 5));
+    expect(a.sections.expand((s) => s.entries).where((e) => e.isDone), isEmpty);
+    expect(titles(a, AgendaSectionKind.recurring), ['Learn Spanish']);
   });
 
   test('missed recurring occurrences collapse into one overdue entry', () async {
@@ -122,13 +177,13 @@ void main() {
     expect(titles(a, AgendaSectionKind.ongoing), ['Ongoing later']);
   });
 
-  test('subtasks with due dates appear with their parent title; hidden when parent closed', () async {
+  test('subtasks with due dates appear with their parent title; hidden when parent cancelled', () async {
     final parent = await add('Learn Spanish', type: TaskType.ongoing);
     await add('Complete lesson 1', due: today, parent: parent);
     var a = await agenda();
     final e = a.sections.expand((s) => s.entries).firstWhere((e) => e.task.title == 'Complete lesson 1');
     expect(e.item.parentTitle, 'Learn Spanish');
-    await env.tasks.setStatus(parent, TaskStatus.completed);
+    await env.tasks.setStatus(parent, TaskStatus.cancelled);
     a = await agenda();
     expect(a.isEmpty, isTrue);
   });

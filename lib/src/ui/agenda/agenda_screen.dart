@@ -49,6 +49,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
             ),
             actions: [
+              if ((agenda?.completedCount ?? 0) > 0)
+                TextButton.icon(
+                  onPressed: s.tasks.archiveAllCompleted,
+                  icon: const Icon(Icons.clear_all, size: 18),
+                  label: Text('Clear completed (${agenda!.completedCount})'),
+                ),
               ListenableBuilder(
                 listenable: s.settings,
                 builder: (context, _) => PopupMenuButton<int>(

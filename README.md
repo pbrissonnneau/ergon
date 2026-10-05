@@ -12,7 +12,7 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 
 | Area | What you get |
 |---|---|
-| Projects | Simple named groups; tasks belong to zero or one project and can be moved in one tap (subtasks follow). |
+| Projects | Containers for tasks: a task belongs to zero or one project; open a project to see and create its tasks; move tasks between projects in one tap (*Move to project*, subtasks follow). Each task shows its project colour in the agenda, lists and overlay. |
 | Tasks | Title, Markdown description, project, type, status, priority, optional due date (date only or date + time), reminders, recurrence, subtasks, created/updated/completed timestamps. |
 | Types | One-time, Ongoing (background, optionally undated), Recurring. |
 | Statuses | Not Started, In Progress, Completed, Suspended, Waiting, Blocked, Cancelled. Completed/cancelled work is kept as history. |
@@ -20,12 +20,12 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 | Subtasks | Any task can have subtasks with their own status, priority, due date and reminders; drag to reorder. |
 | Recurrence | Daily, every N days, weekly, selected weekdays, every N weeks, monthly on a day (or last day), n-th weekday of the month, every N months, yearly; optional end date or count. A recurring task stays one task and materialises individual **occurrences** that are completed independently. |
 | Reminders | Several per task: at a date/time, relative to the due time (e.g. 7 days / 2 hours before), or repeating on their own schedule (e.g. every day at 19:00, also without a due date). Notifications offer **Open**, **Complete** and **Snooze**. |
-| Agenda | *Today* (urgent, due today, ongoing, recurring), *Overdue*, and optional *Upcoming* days (none / tomorrow / 3 / 7 / 14 / 30). Complete, change status/priority, snooze and expand subtasks inline. |
+| Agenda | *Today* (urgent, due today, ongoing, recurring), *Overdue*, and optional *Upcoming* days (none / tomorrow / 3 / 7 / 14 / 30). Complete, change status/priority, snooze and expand subtasks inline. Completed work stays visible (green) for the rest of the day and disappears the next day; remove it earlier per task or with *Clear completed*. Unfinished work is never dropped: it moves to *Overdue*. |
 | Search | Instant full-text search (SQLite FTS5, prefix matching) across titles, descriptions and project names, combinable with project / status / priority / type / due date / completion filters and sorting. |
 | Desktop overlay | Compact, movable, resizable, optionally always-on-top agenda summary; click an item to open it in the main app. Remembers position/size, opacity and visibility; can start at login. |
 | Android widget | Home-screen widget with today's and overdue tasks; tap to open a task, **+** to create one. |
 
-Keyboard (desktop): `Ctrl+N` new task (`Ctrl+Enter` in the dialog adds and keeps it open), `Ctrl+F` search,
+Keyboard (desktop): `Ctrl+N` new task, `Ctrl+Enter` saves (new-task dialog and editor, also from description fields), `Ctrl+F` search,
 `Ctrl+1…4` switch sections, `Esc` closes the editor.
 
 ## Building
@@ -34,7 +34,7 @@ Requires Flutter 3.47+ (Dart 3.13+).
 
 ```sh
 flutter pub get
-flutter test                      # 99 tests: domain, database, reminders, migrations, UI, privacy
+flutter test                      # 105 tests: domain, database, reminders, migrations, UI, privacy
 flutter build linux --release     # Ubuntu: needs clang, cmake, ninja, libgtk-3-dev
 flutter build windows --release   # on Windows with Visual Studio (Desktop C++)
 flutter build apk --release       # Android SDK + NDK
