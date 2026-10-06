@@ -30,7 +30,6 @@ class AgendaScreen extends StatefulWidget {
 class _AgendaScreenState extends State<AgendaScreen> {
   bool _overdueCollapsed = false;
   bool _backlogCollapsed = false;
-  static const _backlogKey = 'agenda.backlog';
 
   /// Keys of selected entries (multi-select); empty = normal mode.
   final _selected = <String>{};
@@ -142,13 +141,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ListenableBuilder(
                 listenable: s.settings,
                 builder: (context, _) {
-                  final shown = s.settings.raw(_backlogKey) != '0';
+                  final shown = s.settings.raw(Backlog.settingKey) != '0';
                   return IconButton(
                     tooltip: shown ? 'Hide backlog' : 'Show backlog (tasks without a date)',
                     isSelected: shown,
                     icon: const Icon(Icons.inbox_outlined),
-                    selectedIcon: const Icon(Icons.inbox),
-                    onPressed: () => s.settings.setRaw(_backlogKey, shown ? '0' : '1'),
+                    selectedIcon: Icon(Icons.inbox_outlined, color: Theme.of(context).colorScheme.primary),
+                    onPressed: () => s.settings.setRaw(Backlog.settingKey, shown ? '0' : '1'),
                   );
                 },
               ),
@@ -177,7 +176,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   listenable: s.settings,
                   builder: (context, _) => LayoutBuilder(
                     builder: (context, c) {
-                      final show = s.settings.raw(_backlogKey) != '0';
+                      final show = s.settings.raw(Backlog.settingKey) != '0';
                       // Wide: backlog as a side panel; narrow: a section below the agenda.
                       final side = show && c.maxWidth >= 900;
                       final list = _body(context, agenda, backlogInList: show && !side);
@@ -368,6 +367,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
   Widget _pastDay(BuildContext context, LocalDate day, List<CompletedItem> items, LocalDate today) {
     final theme = Theme.of(context);
     final isMonday = day.weekday == DateTime.monday;
+    final postponed = items.where((h) => h.postponement != null).length;
+    final done = items.length - postponed;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -384,20 +385,28 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                '${items.length} done',
+                [if (done > 0 || postponed == 0) '$done done', if (postponed > 0) '$postponed postponed'].join(' · '),
                 style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline),
               ),
             ],
           ),
         ),
         for (final h in items)
-          TaskTile(
-            key: ValueKey('h${h.item.task.id}_${h.occurrence?.date.epochDay}'),
-            item: h.item,
-            occurrence: h.occurrence,
-            today: today,
-            dense: true,
-          ),
+          if (h.postponement != null)
+            PostponedTile(
+              key: ValueKey('hp${h.postponement!.id}'),
+              postponement: h.postponement!,
+              today: today,
+              dense: true,
+            )
+          else
+            TaskTile(
+              key: ValueKey('h${h.item.task.id}_${h.occurrence?.date.epochDay}'),
+              item: h.item,
+              occurrence: h.occurrence,
+              today: today,
+              dense: true,
+            ),
         if (isMonday) const Divider(height: 20, indent: 16, endIndent: 16),
       ],
     );
@@ -473,7 +482,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   /// "Overdue" header menu: act on every overdue task at once, or select.
   Widget _overdueMenu(BuildContext context, Agenda agenda, Color color) {
     final s = AppScope.of(context);
-    final overdue = agenda.overdue?.entries.where((e) => !e.isDone).toList() ?? const <AgendaEntry>[];
+    final overdue = agenda.overdue?.entries.where((e) => e.isOpen).toList() ?? const <AgendaEntry>[];
     return PopupMenuButton<Object>(
       tooltip: 'All overdue tasks…',
       icon: Icon(Icons.more_horiz, color: color),

@@ -20,19 +20,20 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 | Subtasks | Any task can have subtasks with their own status, priority, due date and reminders; drag to reorder. |
 | Recurrence | Daily, every N days, weekly, selected weekdays, every N weeks, monthly on a day (or last day), n-th weekday of the month, every N months, yearly; optional end date or count. A recurring task stays one task and materialises individual **occurrences** that are completed independently. |
 | Reminders | Several per task: at a date/time, relative to the due time (e.g. 7 days / 2 hours before), or repeating on their own schedule (e.g. every day at 19:00, also without a due date). Notifications offer **Open**, **Complete** and **Snooze**. |
-| Agenda | *Today* (urgent, due today, ongoing, recurring), *Overdue*, and optional *Upcoming* days (none / tomorrow / 3 / 7 / 14 / 30). Complete, change status/priority, snooze and expand subtasks inline. Completed work stays visible (green) for the rest of the day and disappears the next day; remove it earlier per task or with *Clear completed*. Unfinished work is never dropped: it moves to *Overdue*. |
+| Agenda | *Today* (urgent, due today, ongoing, recurring), *Overdue*, and optional *Upcoming* days (none / tomorrow / 3 / 7 / 14 / 30). Complete, change status/priority, snooze and expand subtasks inline. Completed work stays visible (green) for the rest of the day and disappears the next day; remove it earlier per task or with *Clear completed*. Unfinished work is never dropped: it moves to *Overdue*. A postponed task leaves a red struck-through trace ("Postponed to Thu") on the day it left until the end of the day, and in the history. |
 | Backlog | Open tasks without a date stay visible next to the agenda (side panel on wide windows, a section below the agenda on phones; toggle with the inbox button). Plan one by dragging it onto a day of the agenda or the mini calendar, or with its calendar button; drag a dated task back onto the backlog to remove its date. |
 | Search | Instant full-text search (SQLite FTS5, prefix matching) across titles, descriptions and project names, combinable with project / status / priority / type / due date / completion filters and sorting. |
-| Desktop overlay | Compact, movable, resizable, optionally always-on-top agenda summary with the mini calendar; click the circle to mark a task done (green check), type a title in the field at the bottom and press Enter to add a task for today, click an item to open it in the main app, right-click for Complete / Reschedule / Priority (right-click *OVERDUE* to move them all). Remembers position/size, opacity and visibility; can start at login. |
+| Desktop overlay | Compact, movable, resizable, optionally always-on-top agenda summary with the mini calendar; click the circle to mark a task done (green check), type a title in the field at the bottom and press Enter to add a task for today, click an item to open it in the main app, right-click for Complete / Reschedule / Priority (right-click *OVERDUE* to move them all), drag a line onto a day square to move it. Shown by default when Ergon starts (its × hides it until the next start). Remembers position/size, opacity and visibility; can start at login. |
 | Android widget | Home-screen widget with today's and overdue tasks; tap to open a task, **+** to create one. |
-| Mini calendar | 14 grey squares (from 3 days ago; weekends darker) split into tiny cells in project colours (done = solid). Hover for the list, click for the day, double-click to add a task on that day, drop a task on a day to move it. |
+| Calendar | A month view (*Calendar* tab): one square per day with its tasks as tiny cells in project colours; opens on the current month with today highlighted. Click a day for its list, double-click to add a task, drop a task (e.g. from the backlog shown beside it) on a day to move it. |
+| Mini calendar | 14 grey squares (from 3 days ago; weekends darker) split into tiny cells in project colours (done = solid; a small number when there are too many). Hover for the list, click for the day, double-click to add a task on that day, drop a task on a day to move it. |
 | History | Scroll *up* in the agenda to go back in time, day by day, through what was completed (weekly review). |
 | Bulk actions | *Overdue ⋯*: move all overdue to today / tomorrow / next Monday / a date. Multi-select (toolbar button or Ctrl+click) to reschedule, change priority or project, or complete. Recurring occurrences are skipped rather than moved. |
 | Drag and drop | Desktop: in the agenda, drag to reorder tasks within a day (the order is remembered) or onto another day to change its due date; drag onto a project (a drop bar appears), a project column, or a day of the mini calendar. |
 | Backups | Daily automatic copy of the database (default *Documents/Ergon backups*, 30 kept), *Back up now*, and *Restore* (a safety copy of the current data is made first). |
 
 Keyboard (desktop): `Ctrl+Alt+N` new task from anywhere (Windows global shortcut; on Linux bind a system shortcut to `ergon --new-task`), `Ctrl+N` new task, `Ctrl+Enter` saves (new-task dialog and editor, also from description fields), `Ctrl+F` search,
-`Ctrl+1…4` switch sections, `Esc` closes the editor.
+`Ctrl+1…5` switch sections, `Esc` closes the editor.
 
 ## Building
 
@@ -40,7 +41,7 @@ Requires Flutter 3.47+ (Dart 3.13+).
 
 ```sh
 flutter pub get
-flutter test                      # 121 tests: domain, database, reminders, migrations, UI, privacy
+flutter test                      # 130 tests: domain, database, reminders, migrations, UI, privacy
 flutter build linux --release     # Ubuntu: needs clang, cmake, ninja, libgtk-3-dev
 flutter build windows --release   # on Windows with Visual Studio (Desktop C++)
 flutter build apk --release       # Android SDK + NDK

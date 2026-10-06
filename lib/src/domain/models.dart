@@ -227,8 +227,23 @@ class DayCell {
 
 /// Something completed on a past day (agenda history / weekly review).
 class CompletedItem {
-  const CompletedItem({required this.item, required this.day, this.occurrence});
+  const CompletedItem({required this.item, required this.day, this.occurrence, this.postponement});
   final TaskListItem item;
   final LocalDate day;
   final Occurrence? occurrence;
+
+  /// Set when this history line is a postponement, not a completion.
+  final PostponedItem? postponement;
+}
+
+/// A task moved away from [from] (to [to], or to the backlog when null).
+/// Its original day shows it struck through in red until the end of the day
+/// it was postponed.
+class PostponedItem {
+  const PostponedItem({required this.id, required this.item, required this.from, this.to, required this.at});
+  final int id;
+  final TaskListItem item;
+  final LocalDate from;
+  final LocalDate? to;
+  final DateTime at;
 }

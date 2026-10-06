@@ -138,7 +138,10 @@ class SettingsScreen extends StatelessWidget {
                   SwitchListTile(
                     secondary: const Icon(Icons.picture_in_picture_alt_outlined),
                     title: const Text('Show overlay'),
-                    subtitle: const Text('Compact, movable agenda summary on the desktop'),
+                    subtitle: const Text(
+                      'Compact, movable agenda summary on the desktop, shown when Ergon starts '
+                      '(its × hides it until the next start)',
+                    ),
                     value: st.overlayEnabled,
                     onChanged: (v) {
                       st.overlayEnabled = v;

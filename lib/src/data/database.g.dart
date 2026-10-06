@@ -2876,6 +2876,351 @@ class SettingsCompanion extends UpdateCompanion<SettingRow> {
   }
 }
 
+class $PostponementsTable extends Postponements with TableInfo<$PostponementsTable, PostponementRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PostponementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'),
+  );
+  static const VerificationMeta _taskIdMeta = const VerificationMeta('taskId');
+  @override
+  late final GeneratedColumn<int> taskId = GeneratedColumn<int>(
+    'task_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES tasks (id) ON DELETE CASCADE'),
+  );
+  static const VerificationMeta _fromDateMeta = const VerificationMeta('fromDate');
+  @override
+  late final GeneratedColumn<int> fromDate = GeneratedColumn<int>(
+    'from_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toDateMeta = const VerificationMeta('toDate');
+  @override
+  late final GeneratedColumn<int> toDate = GeneratedColumn<int>(
+    'to_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _archivedAtMeta = const VerificationMeta('archivedAt');
+  @override
+  late final GeneratedColumn<int> archivedAt = GeneratedColumn<int>(
+    'archived_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, taskId, fromDate, toDate, createdAt, archivedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'postponements';
+  @override
+  VerificationContext validateIntegrity(Insertable<PostponementRow> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('task_id')) {
+      context.handle(_taskIdMeta, taskId.isAcceptableOrUnknown(data['task_id']!, _taskIdMeta));
+    } else if (isInserting) {
+      context.missing(_taskIdMeta);
+    }
+    if (data.containsKey('from_date')) {
+      context.handle(_fromDateMeta, fromDate.isAcceptableOrUnknown(data['from_date']!, _fromDateMeta));
+    } else if (isInserting) {
+      context.missing(_fromDateMeta);
+    }
+    if (data.containsKey('to_date')) {
+      context.handle(_toDateMeta, toDate.isAcceptableOrUnknown(data['to_date']!, _toDateMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('archived_at')) {
+      context.handle(_archivedAtMeta, archivedAt.isAcceptableOrUnknown(data['archived_at']!, _archivedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PostponementRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PostponementRow(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      taskId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}task_id'])!,
+      fromDate: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}from_date'])!,
+      toDate: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}to_date']),
+      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+      archivedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}archived_at']),
+    );
+  }
+
+  @override
+  $PostponementsTable createAlias(String alias) {
+    return $PostponementsTable(attachedDatabase, alias);
+  }
+}
+
+class PostponementRow extends DataClass implements Insertable<PostponementRow> {
+  final int id;
+  final int taskId;
+
+  /// Due date the task was moved away from (epoch day).
+  final int fromDate;
+
+  /// New due date (epoch day); null = moved to the backlog (no date).
+  final int? toDate;
+  final int createdAt;
+
+  /// Removed from the agenda by the user (like [Tasks.archivedAt]).
+  final int? archivedAt;
+  const PostponementRow({
+    required this.id,
+    required this.taskId,
+    required this.fromDate,
+    this.toDate,
+    required this.createdAt,
+    this.archivedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['task_id'] = Variable<int>(taskId);
+    map['from_date'] = Variable<int>(fromDate);
+    if (!nullToAbsent || toDate != null) {
+      map['to_date'] = Variable<int>(toDate);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || archivedAt != null) {
+      map['archived_at'] = Variable<int>(archivedAt);
+    }
+    return map;
+  }
+
+  PostponementsCompanion toCompanion(bool nullToAbsent) {
+    return PostponementsCompanion(
+      id: Value(id),
+      taskId: Value(taskId),
+      fromDate: Value(fromDate),
+      toDate: toDate == null && nullToAbsent ? const Value.absent() : Value(toDate),
+      createdAt: Value(createdAt),
+      archivedAt: archivedAt == null && nullToAbsent ? const Value.absent() : Value(archivedAt),
+    );
+  }
+
+  factory PostponementRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PostponementRow(
+      id: serializer.fromJson<int>(json['id']),
+      taskId: serializer.fromJson<int>(json['taskId']),
+      fromDate: serializer.fromJson<int>(json['fromDate']),
+      toDate: serializer.fromJson<int?>(json['toDate']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      archivedAt: serializer.fromJson<int?>(json['archivedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'taskId': serializer.toJson<int>(taskId),
+      'fromDate': serializer.toJson<int>(fromDate),
+      'toDate': serializer.toJson<int?>(toDate),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'archivedAt': serializer.toJson<int?>(archivedAt),
+    };
+  }
+
+  PostponementRow copyWith({
+    int? id,
+    int? taskId,
+    int? fromDate,
+    Value<int?> toDate = const Value.absent(),
+    int? createdAt,
+    Value<int?> archivedAt = const Value.absent(),
+  }) => PostponementRow(
+    id: id ?? this.id,
+    taskId: taskId ?? this.taskId,
+    fromDate: fromDate ?? this.fromDate,
+    toDate: toDate.present ? toDate.value : this.toDate,
+    createdAt: createdAt ?? this.createdAt,
+    archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
+  );
+  PostponementRow copyWithCompanion(PostponementsCompanion data) {
+    return PostponementRow(
+      id: data.id.present ? data.id.value : this.id,
+      taskId: data.taskId.present ? data.taskId.value : this.taskId,
+      fromDate: data.fromDate.present ? data.fromDate.value : this.fromDate,
+      toDate: data.toDate.present ? data.toDate.value : this.toDate,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      archivedAt: data.archivedAt.present ? data.archivedAt.value : this.archivedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PostponementRow(')
+          ..write('id: $id, ')
+          ..write('taskId: $taskId, ')
+          ..write('fromDate: $fromDate, ')
+          ..write('toDate: $toDate, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('archivedAt: $archivedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, taskId, fromDate, toDate, createdAt, archivedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PostponementRow &&
+          other.id == this.id &&
+          other.taskId == this.taskId &&
+          other.fromDate == this.fromDate &&
+          other.toDate == this.toDate &&
+          other.createdAt == this.createdAt &&
+          other.archivedAt == this.archivedAt);
+}
+
+class PostponementsCompanion extends UpdateCompanion<PostponementRow> {
+  final Value<int> id;
+  final Value<int> taskId;
+  final Value<int> fromDate;
+  final Value<int?> toDate;
+  final Value<int> createdAt;
+  final Value<int?> archivedAt;
+  const PostponementsCompanion({
+    this.id = const Value.absent(),
+    this.taskId = const Value.absent(),
+    this.fromDate = const Value.absent(),
+    this.toDate = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.archivedAt = const Value.absent(),
+  });
+  PostponementsCompanion.insert({
+    this.id = const Value.absent(),
+    required int taskId,
+    required int fromDate,
+    this.toDate = const Value.absent(),
+    required int createdAt,
+    this.archivedAt = const Value.absent(),
+  }) : taskId = Value(taskId),
+       fromDate = Value(fromDate),
+       createdAt = Value(createdAt);
+  static Insertable<PostponementRow> custom({
+    Expression<int>? id,
+    Expression<int>? taskId,
+    Expression<int>? fromDate,
+    Expression<int>? toDate,
+    Expression<int>? createdAt,
+    Expression<int>? archivedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (taskId != null) 'task_id': taskId,
+      if (fromDate != null) 'from_date': fromDate,
+      if (toDate != null) 'to_date': toDate,
+      if (createdAt != null) 'created_at': createdAt,
+      if (archivedAt != null) 'archived_at': archivedAt,
+    });
+  }
+
+  PostponementsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? taskId,
+    Value<int>? fromDate,
+    Value<int?>? toDate,
+    Value<int>? createdAt,
+    Value<int?>? archivedAt,
+  }) {
+    return PostponementsCompanion(
+      id: id ?? this.id,
+      taskId: taskId ?? this.taskId,
+      fromDate: fromDate ?? this.fromDate,
+      toDate: toDate ?? this.toDate,
+      createdAt: createdAt ?? this.createdAt,
+      archivedAt: archivedAt ?? this.archivedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (taskId.present) {
+      map['task_id'] = Variable<int>(taskId.value);
+    }
+    if (fromDate.present) {
+      map['from_date'] = Variable<int>(fromDate.value);
+    }
+    if (toDate.present) {
+      map['to_date'] = Variable<int>(toDate.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (archivedAt.present) {
+      map['archived_at'] = Variable<int>(archivedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PostponementsCompanion(')
+          ..write('id: $id, ')
+          ..write('taskId: $taskId, ')
+          ..write('fromDate: $fromDate, ')
+          ..write('toDate: $toDate, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('archivedAt: $archivedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2885,6 +3230,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RemindersTable reminders = $RemindersTable(this);
   late final $ScheduledNotificationsTable scheduledNotifications = $ScheduledNotificationsTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $PostponementsTable postponements = $PostponementsTable(this);
   late final Index idxTasksStatusDue = Index(
     'idx_tasks_status_due',
     'CREATE INDEX idx_tasks_status_due ON tasks (status, due_date)',
@@ -2923,6 +3269,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_sched_key',
     'CREATE UNIQUE INDEX idx_sched_key ON scheduled_notifications (instance_key)',
   );
+  late final Index idxPostponementsCreated = Index(
+    'idx_postponements_created',
+    'CREATE INDEX idx_postponements_created ON postponements (created_at)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
@@ -2933,6 +3283,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     reminders,
     scheduledNotifications,
     settings,
+    postponements,
     idxTasksStatusDue,
     idxTasksParent,
     idxTasksProject,
@@ -2944,6 +3295,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxRemindersTask,
     idxSchedFire,
     idxSchedKey,
+    idxPostponementsCreated,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2962,6 +3314,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     WritePropagation(
       on: TableUpdateQuery.onTableName('tasks', limitUpdateKind: UpdateKind.delete),
       result: [TableUpdate('reminders', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName('tasks', limitUpdateKind: UpdateKind.delete),
+      result: [TableUpdate('postponements', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -3294,6 +3650,19 @@ final class $$TasksTableReferences extends BaseReferences<_$AppDatabase, $TasksT
     final cache = $_typedResult.readTableOrNull(_remindersRefsTable($_db));
     return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$PostponementsTable, List<PostponementRow>> _postponementsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.postponements, aliasName: 'tasks__id__postponements__task_id');
+
+  $$PostponementsTableProcessedTableManager get postponementsRefs {
+    final manager = $$PostponementsTableTableManager(
+      $_db,
+      $_db.postponements,
+    ).filter((f) => f.taskId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_postponementsRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
@@ -3414,6 +3783,24 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
           $$RemindersTableFilterComposer(
             $db: $db,
             $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> postponementsRefs(Expression<bool> Function($$PostponementsTableFilterComposer f) f) {
+    final $$PostponementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.postponements,
+      getReferencedColumn: (t) => t.taskId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$PostponementsTableFilterComposer(
+            $db: $db,
+            $table: $db.postponements,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
@@ -3628,6 +4015,26 @@ class $$TasksTableAnnotationComposer extends Composer<_$AppDatabase, $TasksTable
     );
     return f(composer);
   }
+
+  Expression<T> postponementsRefs<T extends Object>(
+    Expression<T> Function($$PostponementsTableAnnotationComposer a) f,
+  ) {
+    final $$PostponementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.postponements,
+      getReferencedColumn: (t) => t.taskId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$PostponementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.postponements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$TasksTableTableManager
@@ -3643,7 +4050,13 @@ class $$TasksTableTableManager
           $$TasksTableUpdateCompanionBuilder,
           (TaskRow, $$TasksTableReferences),
           TaskRow,
-          PrefetchHooks Function({bool parentId, bool projectId, bool occurrencesRefs, bool remindersRefs})
+          PrefetchHooks Function({
+            bool parentId,
+            bool projectId,
+            bool occurrencesRefs,
+            bool remindersRefs,
+            bool postponementsRefs,
+          })
         > {
   $$TasksTableTableManager(_$AppDatabase db, $TasksTable table)
     : super(
@@ -3736,10 +4149,20 @@ class $$TasksTableTableManager
           withReferenceMapper: (p0) =>
               p0.map((e) => (e.readTable<$TasksTable, TaskRow>(table), $$TasksTableReferences(db, table, e))).toList(),
           prefetchHooksCallback:
-              ({parentId = false, projectId = false, occurrencesRefs = false, remindersRefs = false}) {
+              ({
+                parentId = false,
+                projectId = false,
+                occurrencesRefs = false,
+                remindersRefs = false,
+                postponementsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
-                  explicitlyWatchedTables: [if (occurrencesRefs) db.occurrences, if (remindersRefs) db.reminders],
+                  explicitlyWatchedTables: [
+                    if (occurrencesRefs) db.occurrences,
+                    if (remindersRefs) db.reminders,
+                    if (postponementsRefs) db.postponements,
+                  ],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -3795,6 +4218,15 @@ class $$TasksTableTableManager
                               referencedItems.where((e) => e.taskId == item.id),
                           typedResults: items,
                         ),
+                      if (postponementsRefs)
+                        await $_getPrefetchedData<TaskRow, $TasksTable, PostponementRow>(
+                          currentTable: table,
+                          referencedTable: $$TasksTableReferences._postponementsRefsTable(db),
+                          managerFromTypedResult: (p0) => $$TasksTableReferences(db, table, p0).postponementsRefs,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.taskId == item.id),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -3815,7 +4247,13 @@ typedef $$TasksTableProcessedTableManager =
       $$TasksTableUpdateCompanionBuilder,
       (TaskRow, $$TasksTableReferences),
       TaskRow,
-      PrefetchHooks Function({bool parentId, bool projectId, bool occurrencesRefs, bool remindersRefs})
+      PrefetchHooks Function({
+        bool parentId,
+        bool projectId,
+        bool occurrencesRefs,
+        bool remindersRefs,
+        bool postponementsRefs,
+      })
     >;
 typedef $$OccurrencesTableCreateCompanionBuilder = OccurrencesCompanion Function({
   Value<int> id,
@@ -4802,6 +5240,274 @@ typedef $$SettingsTableProcessedTableManager =
       SettingRow,
       PrefetchHooks Function()
     >;
+typedef $$PostponementsTableCreateCompanionBuilder = PostponementsCompanion Function({
+  Value<int> id,
+  required int taskId,
+  required int fromDate,
+  Value<int?> toDate,
+  required int createdAt,
+  Value<int?> archivedAt,
+});
+typedef $$PostponementsTableUpdateCompanionBuilder = PostponementsCompanion Function({
+  Value<int> id,
+  Value<int> taskId,
+  Value<int> fromDate,
+  Value<int?> toDate,
+  Value<int> createdAt,
+  Value<int?> archivedAt,
+});
+
+final class $$PostponementsTableReferences extends BaseReferences<_$AppDatabase, $PostponementsTable, PostponementRow> {
+  $$PostponementsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $TasksTable _taskIdTable(_$AppDatabase db) => db.tasks.createAlias('postponements__task_id__tasks__id');
+
+  $$TasksTableProcessedTableManager get taskId {
+    final $_column = $_itemColumn<int>('task_id')!;
+
+    final manager = $$TasksTableTableManager($_db, $_db.tasks).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_taskIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$PostponementsTableFilterComposer extends Composer<_$AppDatabase, $PostponementsTable> {
+  $$PostponementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get fromDate =>
+      $composableBuilder(column: $table.fromDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get toDate =>
+      $composableBuilder(column: $table.toDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get archivedAt =>
+      $composableBuilder(column: $table.archivedAt, builder: (column) => ColumnFilters(column));
+
+  $$TasksTableFilterComposer get taskId {
+    final $$TasksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.taskId,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$TasksTableFilterComposer(
+            $db: $db,
+            $table: $db.tasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PostponementsTableOrderingComposer extends Composer<_$AppDatabase, $PostponementsTable> {
+  $$PostponementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get fromDate =>
+      $composableBuilder(column: $table.fromDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get toDate =>
+      $composableBuilder(column: $table.toDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get archivedAt =>
+      $composableBuilder(column: $table.archivedAt, builder: (column) => ColumnOrderings(column));
+
+  $$TasksTableOrderingComposer get taskId {
+    final $$TasksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.taskId,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$TasksTableOrderingComposer(
+            $db: $db,
+            $table: $db.tasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PostponementsTableAnnotationComposer extends Composer<_$AppDatabase, $PostponementsTable> {
+  $$PostponementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get fromDate => $composableBuilder(column: $table.fromDate, builder: (column) => column);
+
+  GeneratedColumn<int> get toDate => $composableBuilder(column: $table.toDate, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get archivedAt => $composableBuilder(column: $table.archivedAt, builder: (column) => column);
+
+  $$TasksTableAnnotationComposer get taskId {
+    final $$TasksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.taskId,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$TasksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PostponementsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PostponementsTable,
+          PostponementRow,
+          $$PostponementsTableFilterComposer,
+          $$PostponementsTableOrderingComposer,
+          $$PostponementsTableAnnotationComposer,
+          $$PostponementsTableCreateCompanionBuilder,
+          $$PostponementsTableUpdateCompanionBuilder,
+          (PostponementRow, $$PostponementsTableReferences),
+          PostponementRow,
+          PrefetchHooks Function({bool taskId})
+        > {
+  $$PostponementsTableTableManager(_$AppDatabase db, $PostponementsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$PostponementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$PostponementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$PostponementsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> taskId = const Value.absent(),
+                Value<int> fromDate = const Value.absent(),
+                Value<int?> toDate = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int?> archivedAt = const Value.absent(),
+              }) => PostponementsCompanion(
+                id: id,
+                taskId: taskId,
+                fromDate: fromDate,
+                toDate: toDate,
+                createdAt: createdAt,
+                archivedAt: archivedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int taskId,
+                required int fromDate,
+                Value<int?> toDate = const Value.absent(),
+                required int createdAt,
+                Value<int?> archivedAt = const Value.absent(),
+              }) => PostponementsCompanion.insert(
+                id: id,
+                taskId: taskId,
+                fromDate: fromDate,
+                toDate: toDate,
+                createdAt: createdAt,
+                archivedAt: archivedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PostponementsTable, PostponementRow>(table),
+                  $$PostponementsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({taskId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (taskId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.taskId,
+                        referencedTable: $$PostponementsTableReferences._taskIdTable(db),
+                        referencedColumn: $$PostponementsTableReferences._taskIdTable(db).id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PostponementsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PostponementsTable,
+      PostponementRow,
+      $$PostponementsTableFilterComposer,
+      $$PostponementsTableOrderingComposer,
+      $$PostponementsTableAnnotationComposer,
+      $$PostponementsTableCreateCompanionBuilder,
+      $$PostponementsTableUpdateCompanionBuilder,
+      (PostponementRow, $$PostponementsTableReferences),
+      PostponementRow,
+      PrefetchHooks Function({bool taskId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4813,4 +5519,5 @@ class $AppDatabaseManager {
   $$ScheduledNotificationsTableTableManager get scheduledNotifications =>
       $$ScheduledNotificationsTableTableManager(_db, _db.scheduledNotifications);
   $$SettingsTableTableManager get settings => $$SettingsTableTableManager(_db, _db.settings);
+  $$PostponementsTableTableManager get postponements => $$PostponementsTableTableManager(_db, _db.postponements);
 }

@@ -16,13 +16,21 @@ class AgendaService {
     late StreamController<Agenda> controller;
     StreamSubscription<List<TaskListItem>>? s1;
     StreamSubscription<List<(TaskListItem, Occurrence)>>? s2;
+    StreamSubscription<List<PostponedItem>>? s3;
     List<TaskListItem>? lastTasks;
     List<(TaskListItem, Occurrence)>? lastOcc;
+    List<PostponedItem>? lastPostponed;
 
     void emit() {
-      if (lastTasks == null || lastOcc == null) return;
+      if (lastTasks == null || lastOcc == null || lastPostponed == null) return;
       controller.add(
-        AgendaBuilder.build(today: today, upcomingDays: upcomingDays, tasks: lastTasks!, occurrences: lastOcc!),
+        AgendaBuilder.build(
+          today: today,
+          upcomingDays: upcomingDays,
+          tasks: lastTasks!,
+          occurrences: lastOcc!,
+          postponed: lastPostponed!,
+        ),
       );
     }
 
@@ -40,10 +48,15 @@ class AgendaService {
           lastOcc = v;
           emit();
         }, onError: controller.addError);
+        s3 = tasks.watchPostponed(end, today: today).listen((v) {
+          lastPostponed = v;
+          emit();
+        }, onError: controller.addError);
       },
       onCancel: () async {
         await s1?.cancel();
         await s2?.cancel();
+        await s3?.cancel();
       },
     );
     return controller.stream;

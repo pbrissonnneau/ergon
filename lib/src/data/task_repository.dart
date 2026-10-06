@@ -318,8 +318,19 @@ class TaskRepository {
           readsFrom: {db.tasks, db.projects, db.occurrences},
         )
         .watch();
+    final postponed = db
+        .customSelect(
+          'SELECT $_listColumns, pp.id AS pp_id, pp.from_date AS pp_from, pp.to_date AS pp_to, pp.created_at AS pp_at '
+          'FROM postponements pp JOIN tasks t ON t.id = pp.task_id '
+          'LEFT JOIN projects p ON p.id = t.project_id LEFT JOIN tasks par ON par.id = t.parent_id '
+          'WHERE pp.created_at >= ? AND pp.created_at < ? ORDER BY pp.created_at DESC',
+          variables: [Variable.withInt(startMs), Variable.withInt(endMs)],
+          readsFrom: {db.tasks, db.projects, db.postponements},
+        )
+        .watch();
     LocalDate dayOf(int ms) => LocalDate.fromDateTime(DateTime.fromMillisecondsSinceEpoch(ms));
-    return _combine(tasks, occurrences, (ts, os) {
+    return _combine(tasks, _combine(occurrences, postponed, (o, p) => (o, p)), (ts, rest) {
+      final (os, ps) = rest;
       final out = <CompletedItem>[
         for (final r in ts) CompletedItem(item: _listItem(r), day: dayOf(r.read<int>('completed_at'))),
         for (final r in os)
@@ -336,6 +347,11 @@ class TaskRepository {
               ),
             );
           }(),
+        for (final r in ps)
+          () {
+            final p = _postponedItem(r);
+            return CompletedItem(item: p.item, day: dayOf(r.read<int>('pp_at')), postponement: p);
+          }(),
       ];
       return out;
     });
@@ -346,7 +362,8 @@ class TaskRepository {
     final r = await db
         .customSelect(
           'SELECT MIN(m) AS m FROM (SELECT MIN(completed_at) AS m FROM tasks WHERE status = 2 '
-          'UNION ALL SELECT MIN(completed_at) FROM occurrences WHERE status = 2)',
+          'UNION ALL SELECT MIN(completed_at) FROM occurrences WHERE status = 2 '
+          'UNION ALL SELECT MIN(created_at) FROM postponements)',
         )
         .getSingle();
     final ms = r.readNullable<int>('m');
@@ -444,6 +461,7 @@ class TaskRepository {
     final ruleChanged =
         recurring != (old.type == TaskType.recurring.code && oldRule != null) || (recurring && oldRule != d.recurrence);
     final status = d.status;
+    if (!recurring && d.dueDate?.epochDay != old.dueDate) await _recordPostponements([id], d.dueDate);
     await (db.update(db.tasks)..where((t) => t.id.equals(id))).write(
       TasksCompanion(
         title: Value(d.title.trim()),
@@ -530,6 +548,7 @@ class TaskRepository {
   Future<void> rescheduleTasks(Iterable<int> ids, LocalDate? date) async {
     final list = ids.toList();
     if (list.isEmpty) return;
+    await _recordPostponements(list, date);
     await (db.update(db.tasks)..where((t) => t.id.isIn(list) & t.type.isNotValue(TaskType.recurring.code))).write(
       // A new day starts without manual order (sorted by priority/time there).
       TasksCompanion(dueDate: Value(date?.epochDay), dayOrder: const Value(0), updatedAt: Value(_now)),
@@ -592,20 +611,92 @@ class TaskRepository {
     );
     await (db.update(db.occurrences)..where((o) => o.status.equals(TaskStatus.completed.code) & o.archivedAt.isNull()))
         .write(OccurrencesCompanion(archivedAt: Value(now)));
+    await (db.update(
+      db.postponements,
+    )..where((p) => p.archivedAt.isNull())).write(PostponementsCompanion(archivedAt: Value(now)));
   });
 
   Future<void> setPriority(int id, TaskPriority priority) => (db.update(
     db.tasks,
   )..where((t) => t.id.equals(id))).write(TasksCompanion(priority: Value(priority.code), updatedAt: Value(_now)));
 
-  Future<void> setDue(int id, LocalDate? date, int? minute) =>
-      (db.update(db.tasks)..where((t) => t.id.equals(id) & t.type.isNotValue(TaskType.recurring.code))).write(
-        TasksCompanion(
-          dueDate: Value(date?.epochDay),
-          dueMinute: Value(date == null ? null : minute),
-          updatedAt: Value(_now),
-        ),
-      );
+  Future<void> setDue(int id, LocalDate? date, int? minute) async {
+    await _recordPostponements([id], date);
+    await (db.update(db.tasks)..where((t) => t.id.equals(id) & t.type.isNotValue(TaskType.recurring.code))).write(
+      TasksCompanion(
+        dueDate: Value(date?.epochDay),
+        dueMinute: Value(date == null ? null : minute),
+        updatedAt: Value(_now),
+      ),
+    );
+  }
+
+  /// Remembers that open, dated, non-recurring tasks among [ids] are
+  /// postponed to [to] (a later day, or null = backlog), so the day they
+  /// leave keeps a trace. Moving a task back to a day it left today removes
+  /// that day's trace.
+  Future<void> _recordPostponements(List<int> ids, LocalDate? to) async {
+    final rows =
+        await (db.select(db.tasks)..where(
+              (t) =>
+                  t.id.isIn(ids) &
+                  t.type.isNotValue(TaskType.recurring.code) &
+                  t.dueDate.isNotNull() &
+                  t.status.isIn(TaskStatus.agendaCodes),
+            ))
+            .get();
+    final now = _now;
+    if (to != null) {
+      await (db.delete(db.postponements)..where(
+            (p) =>
+                p.taskId.isIn(ids) &
+                p.fromDate.equals(to.epochDay) &
+                p.createdAt.isBiggerOrEqualValue(_startOfDayMs(_today)),
+          ))
+          .go();
+    }
+    for (final r in rows) {
+      // Only postponing leaves a trace (later day or backlog), not bringing
+      // a task forward.
+      if (to != null && to.epochDay <= r.dueDate!) continue;
+      await db
+          .into(db.postponements)
+          .insert(
+            PostponementsCompanion.insert(
+              taskId: r.id,
+              fromDate: r.dueDate!,
+              toDate: Value(to?.epochDay),
+              createdAt: now,
+            ),
+          );
+    }
+  }
+
+  /// Traces of tasks postponed today (not removed), for days up to [end].
+  Stream<List<PostponedItem>> watchPostponed(LocalDate end, {required LocalDate today}) => db
+      .customSelect(
+        'SELECT $_listColumns, pp.id AS pp_id, pp.from_date AS pp_from, pp.to_date AS pp_to, pp.created_at AS pp_at '
+        'FROM postponements pp JOIN tasks t ON t.id = pp.task_id '
+        'LEFT JOIN projects p ON p.id = t.project_id LEFT JOIN tasks par ON par.id = t.parent_id '
+        'WHERE pp.archived_at IS NULL AND pp.created_at >= ? AND pp.from_date <= ? ORDER BY pp.created_at',
+        variables: [Variable.withInt(_startOfDayMs(today)), Variable.withInt(end.epochDay)],
+        readsFrom: {db.tasks, db.projects, db.postponements},
+      )
+      .watch()
+      .map((rows) => rows.map(_postponedItem).toList());
+
+  PostponedItem _postponedItem(QueryRow r) => PostponedItem(
+    id: r.read<int>('pp_id'),
+    item: _listItem(r),
+    from: LocalDate.fromEpochDay(r.read<int>('pp_from')),
+    to: epochDayToDate(r.readNullable<int>('pp_to')),
+    at: DateTime.fromMillisecondsSinceEpoch(r.read<int>('pp_at')),
+  );
+
+  /// Removes a postponed trace from the agenda now (it stays in history).
+  Future<void> archivePostponement(int id) => (db.update(
+    db.postponements,
+  )..where((p) => p.id.equals(id))).write(PostponementsCompanion(archivedAt: Value(_now)));
 
   Future<void> rename(int id, String title) => (db.update(
     db.tasks,

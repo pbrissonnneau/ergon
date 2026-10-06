@@ -6,7 +6,10 @@ import '../../app/app_services.dart';
 import '../../core/local_date.dart';
 import '../../core/startup_trace.dart';
 import '../../domain/agenda.dart';
+import '../../domain/models.dart';
 import '../formatting.dart';
+import '../task_actions.dart';
+import '../theme.dart';
 import '../widgets/task_tile.dart';
 
 /// Subscribes to the live agenda for the current day and upcoming setting.
@@ -147,20 +150,99 @@ class AgendaEntryTile extends StatelessWidget {
   final VoidCallback? onSelect;
 
   @override
-  Widget build(BuildContext context) => ExpandableTaskTile(
-    item: entry.item,
-    occurrence: entry.occurrence,
-    today: today,
-    missedCount: entry.missedCount,
-    // Done today: stays visible until tomorrow, unless removed now.
-    onRemove: entry.isDone
-        ? () {
-            final tasks = AppScope.of(context).tasks;
-            final occ = entry.occurrence;
-            occ != null ? tasks.archiveOccurrence(entry.task.id, occ.date) : tasks.archiveTask(entry.task.id);
-          }
-        : null,
-    selected: selected,
-    onSelect: onSelect,
-  );
+  Widget build(BuildContext context) => entry.isPostponed
+      ? PostponedTile(
+          postponement: entry.postponement!,
+          today: today,
+          onRemove: () => AppScope.of(context).tasks.archivePostponement(entry.postponement!.id),
+        )
+      : ExpandableTaskTile(
+          item: entry.item,
+          occurrence: entry.occurrence,
+          today: today,
+          missedCount: entry.missedCount,
+          // Done today: stays visible until tomorrow, unless removed now.
+          onRemove: entry.isDone
+              ? () {
+                  final tasks = AppScope.of(context).tasks;
+                  final occ = entry.occurrence;
+                  occ != null ? tasks.archiveOccurrence(entry.task.id, occ.date) : tasks.archiveTask(entry.task.id);
+                }
+              : null,
+          selected: selected,
+          onSelect: onSelect,
+        );
+}
+
+/// Trace of a task postponed away from this day: struck through in red,
+/// with where it went. Click opens the task; × removes the trace now.
+class PostponedTile extends StatelessWidget {
+  const PostponedTile({super.key, required this.postponement, required this.today, this.onRemove, this.dense = false});
+  final PostponedItem postponement;
+  final LocalDate today;
+  final VoidCallback? onRemove;
+  final bool dense;
+
+  static String destination(PostponedItem p, LocalDate today) {
+    final to = p.to;
+    if (to == null) return 'Moved to backlog';
+    final when = Fmt.relativeDate(to, today);
+    return 'Postponed to ${today.daysUntil(to).abs() <= 1 ? when.toLowerCase() : when}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final red = scheme.error;
+    final item = postponement.item;
+    return InkWell(
+      onTap: () => TaskActions.open(context, item.task.id),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, dense ? 4 : 8, 8, dense ? 4 : 8),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: dense ? 28 : 36,
+              decoration: BoxDecoration(
+                color: AppTheme.projectColor(item.projectColor, scheme).withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Icon(Icons.redo, size: 20, color: red),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: red.withValues(alpha: 0.8),
+                      decoration: TextDecoration.lineThrough,
+                      decorationColor: red,
+                      decorationThickness: 2,
+                    ),
+                  ),
+                  Text(destination(postponement, today), style: theme.textTheme.labelSmall?.copyWith(color: red)),
+                ],
+              ),
+            ),
+            if (onRemove != null)
+              IconButton(
+                tooltip: 'Remove from the agenda',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(Icons.close, size: 18, color: scheme.outline),
+                onPressed: onRemove,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

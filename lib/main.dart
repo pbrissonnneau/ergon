@@ -93,6 +93,7 @@ Future<void> main(List<String> args) async {
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     StartupTrace.mark('first-frame');
     await services.startBackground(watchExternalChanges: platform.isDesktop);
+    if (platform.supportsOverlay) await services.settings.upgradeOverlayDefault();
     if (platform.supportsOverlay && services.settings.overlayEnabled) {
       unawaited(platform.setOverlayVisible(true));
     }

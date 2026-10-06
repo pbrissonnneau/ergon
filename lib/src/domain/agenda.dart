@@ -14,15 +14,20 @@ enum AgendaSectionKind {
   final String label;
 }
 
-/// One line in the agenda: a task, or one occurrence of a recurring task.
+/// One line in the agenda: a task, one occurrence of a recurring task, or
+/// the struck-through trace of a task postponed away from that day.
 class AgendaEntry {
-  const AgendaEntry({required this.item, this.occurrence, this.missedCount = 0});
+  const AgendaEntry({required this.item, this.occurrence, this.missedCount = 0, this.postponement});
 
   final TaskListItem item;
   final Occurrence? occurrence;
 
   /// For overdue recurring entries: how many earlier occurrences were missed.
   final int missedCount;
+
+  /// Set for the trace of a postponed task (not actionable).
+  final PostponedItem? postponement;
+  bool get isPostponed => postponement != null;
 
   Task get task => item.task;
   bool get isOccurrence => occurrence != null;
@@ -34,7 +39,14 @@ class AgendaEntry {
   bool get isDone => status == TaskStatus.completed;
 
   /// Stable key for list diffing.
-  String get key => occurrence != null ? 'o${task.id}_${occurrence!.date.epochDay}' : 't${task.id}';
+  String get key => postponement != null
+      ? 'p${postponement!.id}'
+      : occurrence != null
+      ? 'o${task.id}_${occurrence!.date.epochDay}'
+      : 't${task.id}';
+
+  /// Still to do (counts, bulk actions): not done and not a postponed trace.
+  bool get isOpen => !isDone && !isPostponed;
 }
 
 class AgendaSection {
@@ -46,7 +58,7 @@ class AgendaSection {
   final LocalDate? date;
 
   /// Entries still to do (completed ones are shown but not counted).
-  int get openCount => entries.where((e) => !e.isDone).length;
+  int get openCount => entries.where((e) => e.isOpen).length;
 
   bool get isTodayGroup =>
       kind == AgendaSectionKind.todayUrgent ||
@@ -70,8 +82,8 @@ class Agenda {
   int get todayCount => todaySections.fold(0, (n, s) => n + s.openCount);
   int get overdueCount => overdue?.openCount ?? 0;
 
-  /// Entries completed today that are still displayed.
-  int get completedCount => sections.fold(0, (n, s) => n + s.entries.where((e) => e.isDone).length);
+  /// Entries completed or postponed today that are still displayed.
+  int get completedCount => sections.fold(0, (n, s) => n + s.entries.where((e) => !e.isOpen).length);
   bool get isEmpty => sections.every((s) => s.entries.isEmpty);
 }
 
@@ -82,6 +94,7 @@ abstract final class AgendaBuilder {
     required int upcomingDays,
     required List<TaskListItem> tasks,
     required List<(TaskListItem, Occurrence)> occurrences,
+    List<PostponedItem> postponed = const [],
   }) {
     final end = today.addDays(upcomingDays);
     final urgent = <AgendaEntry>[];
@@ -141,6 +154,21 @@ abstract final class AgendaBuilder {
     ongoing.sort(_byPriorityThenTime);
     recurring.sort(_byPriorityThenTime);
     overdue.sort(_byDateThenPriority);
+    for (final list in upcoming.values) {
+      list.sort(_byPriorityThenTime);
+    }
+
+    // Traces of postponed tasks stay on their original day, after its tasks.
+    for (final p in postponed) {
+      final e = AgendaEntry(item: p.item, postponement: p);
+      if (p.from < today) {
+        overdue.add(e);
+      } else if (p.from == today) {
+        dueToday.add(e);
+      } else if (p.from <= end) {
+        upcoming.putIfAbsent(p.from.epochDay, () => []).add(e);
+      }
+    }
 
     final sections = <AgendaSection>[
       if (urgent.isNotEmpty) AgendaSection(AgendaSectionKind.todayUrgent, urgent),
@@ -149,11 +177,7 @@ abstract final class AgendaBuilder {
       if (recurring.isNotEmpty) AgendaSection(AgendaSectionKind.recurring, recurring),
       if (overdue.isNotEmpty) AgendaSection(AgendaSectionKind.overdue, overdue),
       for (final day in upcoming.keys.toList()..sort())
-        AgendaSection(
-          AgendaSectionKind.upcoming,
-          upcoming[day]!..sort(_byPriorityThenTime),
-          date: LocalDate.fromEpochDay(day),
-        ),
+        AgendaSection(AgendaSectionKind.upcoming, upcoming[day]!, date: LocalDate.fromEpochDay(day)),
     ];
     return Agenda(today: today, sections: sections);
   }

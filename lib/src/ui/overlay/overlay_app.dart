@@ -20,6 +20,7 @@ import '../agenda/week_strip.dart';
 import '../bulk_actions.dart';
 import '../formatting.dart';
 import '../theme.dart';
+import '../widgets/task_drag.dart';
 
 /// Entry point of the compact desktop overlay process (`ergon --overlay`).
 ///
@@ -203,13 +204,16 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Ergon overlay',
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
+        // Overlay: no ink ripples (instant, quiet UI).
+        theme: AppTheme.light().copyWith(splashFactory: NoSplash.splashFactory),
+        darkTheme: AppTheme.dark().copyWith(splashFactory: NoSplash.splashFactory),
         themeMode: switch (s.settings.themeMode) {
           1 => ThemeMode.light,
           2 => ThemeMode.dark,
           _ => ThemeMode.system,
         },
+        // No hover tooltips in the overlay.
+        builder: (context, child) => TooltipVisibility(visible: false, child: child!),
         home: DragToResizeArea(
           resizeEdgeSize: 6,
           child: Scaffold(
@@ -220,11 +224,9 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
                   onToggleTop: () => s.settings.overlayAlwaysOnTop = !_onTop,
                   onOpenMain: platform.showMain,
                   onAdd: () => platform.quickAddInMain(),
-                  onClose: () async {
-                    if (_closeOnDisable) s.settings.overlayEnabled = false;
-                    await Future<void>.delayed(const Duration(milliseconds: 50));
-                    await windowManager.close();
-                  },
+                  // Hides the overlay until Ergon starts again (turn it off for
+                  // good in Settings).
+                  onClose: windowManager.close,
                 ),
                 const Divider(height: 1),
                 Padding(
@@ -364,73 +366,82 @@ class _OverlayList extends StatelessWidget {
 
     void entries(Iterable<AgendaEntry> es, {bool overdue = false}) {
       for (final e in es) {
+        if (e.isPostponed) {
+          rows.add(_postponedRow(context, e));
+          continue;
+        }
         rows.add(
-          InkWell(
-            onTap: () => onOpen(e.task.id),
-            onSecondaryTapUp: (d) => _taskMenu(context, e, d.globalPosition),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              child: Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: AppTheme.projectColor(e.item.projectColor, scheme),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  // Done button: the circle turns into a green check (click again to undo).
-                  InkResponse(
-                    radius: 14,
-                    onTap: () => _toggleDone(context, e),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      child: Icon(
-                        e.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-                        size: 18,
-                        color: e.isDone
-                            ? AppTheme.statusColor(TaskStatus.completed, scheme)
-                            : AppTheme.priorityColor(e.task.priority, scheme),
+          // Drag a line onto a day square to move it there.
+          DraggableTask(
+            data: TaskDragData(e.task, occurrenceDate: e.occurrence?.date),
+            enabled: !e.isDone,
+            child: InkWell(
+              onTap: () => onOpen(e.task.id),
+              onSecondaryTapUp: (d) => _taskMenu(context, e, d.globalPosition),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: AppTheme.projectColor(e.item.projectColor, scheme),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ),
-                  if (e.task.priority.code >= TaskPriority.high.code && !e.isDone)
-                    Icon(
-                      AppTheme.priorityIcon(e.task.priority),
-                      size: 13,
-                      color: AppTheme.priorityColor(e.task.priority, scheme),
-                    ),
-                  if (e.isOccurrence) ...[
-                    Icon(Icons.repeat, size: 13, color: scheme.outline),
-                    const SizedBox(width: 4),
-                  ],
-                  Expanded(
-                    child: Text(
-                      e.task.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: e.isDone ? scheme.outline : (overdue ? scheme.error : null),
-                        decoration: e.isDone ? TextDecoration.lineThrough : null,
+                    // Done button: the circle turns into a green check (click again to undo).
+                    InkResponse(
+                      radius: 14,
+                      onTap: () => _toggleDone(context, e),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Icon(
+                          e.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+                          size: 18,
+                          color: e.isDone
+                              ? AppTheme.statusColor(TaskStatus.completed, scheme)
+                              : AppTheme.priorityColor(e.task.priority, scheme),
+                        ),
                       ),
                     ),
-                  ),
-                  if (e.minute != null)
-                    Text(
-                      MinuteOfDay.format(e.minute!),
-                      style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline),
-                    ),
-                  if (e.status != TaskStatus.notStarted && !e.isDone)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Icon(
-                        AppTheme.statusIcon(e.status),
+                    if (e.task.priority.code >= TaskPriority.high.code && !e.isDone)
+                      Icon(
+                        AppTheme.priorityIcon(e.task.priority),
                         size: 13,
-                        color: AppTheme.statusColor(e.status, scheme),
+                        color: AppTheme.priorityColor(e.task.priority, scheme),
+                      ),
+                    if (e.isOccurrence) ...[
+                      Icon(Icons.repeat, size: 13, color: scheme.outline),
+                      const SizedBox(width: 4),
+                    ],
+                    Expanded(
+                      child: Text(
+                        e.task.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: e.isDone ? scheme.outline : (overdue ? scheme.error : null),
+                          decoration: e.isDone ? TextDecoration.lineThrough : null,
+                        ),
                       ),
                     ),
-                ],
+                    if (e.minute != null)
+                      Text(
+                        MinuteOfDay.format(e.minute!),
+                        style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline),
+                      ),
+                    if (e.status != TaskStatus.notStarted && !e.isDone)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(
+                          AppTheme.statusIcon(e.status),
+                          size: 13,
+                          color: AppTheme.statusColor(e.status, scheme),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -444,7 +455,7 @@ class _OverlayList extends StatelessWidget {
         'OVERDUE',
         overdue.openCount,
         scheme.error,
-        (at) => _overdueMenu(context, overdue.entries.where((e) => !e.isDone).toList(), at),
+        (at) => _overdueMenu(context, overdue.entries.where((e) => e.isOpen).toList(), at),
       );
       entries(overdue.entries, overdue: true);
     }
@@ -455,7 +466,7 @@ class _OverlayList extends StatelessWidget {
     for (final s in agenda.upcoming) {
       header(
         s.date == agenda.today.addDays(1) ? 'TOMORROW' : Fmt.longDate(s.date!).toUpperCase(),
-        s.entries.length,
+        s.openCount,
         scheme.outline,
       );
       entries(s.entries);
@@ -469,6 +480,46 @@ class _OverlayList extends StatelessWidget {
       );
     }
     return ListView(padding: const EdgeInsets.only(bottom: 8), children: rows);
+  }
+
+  /// Postponed task: struck through in red on the day it left.
+  Widget _postponedRow(BuildContext context, AgendaEntry e) {
+    final theme = Theme.of(context);
+    final red = theme.colorScheme.error;
+    final p = e.postponement!;
+    final to = p.to;
+    return InkWell(
+      onTap: () => onOpen(e.task.id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Row(
+          children: [
+            const SizedBox(width: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Icon(Icons.redo, size: 18, color: red),
+            ),
+            Expanded(
+              child: Text(
+                e.task.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: red.withValues(alpha: 0.8),
+                  decoration: TextDecoration.lineThrough,
+                  decorationColor: red,
+                  decorationThickness: 2,
+                ),
+              ),
+            ),
+            Text(
+              to == null ? 'backlog' : '→ ${Fmt.relativeDate(to, agenda.today)}',
+              style: theme.textTheme.labelSmall?.copyWith(color: red),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   RelativeRect _at(BuildContext context, Offset p) {

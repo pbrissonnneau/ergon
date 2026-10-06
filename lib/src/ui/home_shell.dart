@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../app/app_services.dart';
 import '../core/local_date.dart';
 import 'agenda/agenda_screen.dart';
+import 'calendar/calendar_screen.dart';
 import 'editor/quick_add.dart';
 import 'projects/projects_screen.dart';
 import 'settings/settings_screen.dart';
@@ -24,12 +25,15 @@ class HomeShell extends StatefulWidget {
 
 class HomeShellState extends State<HomeShell> {
   int _index = 0;
+  static const _tasksTab = 2;
+  static const _projectsTab = 3;
   final _visited = <int>{};
   final _searchFocus = FocusNode();
-  late final _navigators = List.generate(4, (_) => GlobalKey<NavigatorState>());
+  late final _navigators = List.generate(5, (_) => GlobalKey<NavigatorState>());
 
   static const _destinations = [
     (Icons.today_outlined, Icons.today, 'Agenda'),
+    (Icons.calendar_month_outlined, Icons.calendar_month, 'Calendar'),
     (Icons.checklist_outlined, Icons.checklist, 'Tasks'),
     (Icons.folder_outlined, Icons.folder, 'Projects'),
     (Icons.settings_outlined, Icons.settings, 'Settings'),
@@ -47,7 +51,7 @@ class HomeShellState extends State<HomeShell> {
     }
     setState(() => _index = i);
     // Offstage tabs cannot take focus; wait until the tab is visible.
-    if (i == 1) WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
+    if (i == _tasksTab) WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
   }
 
   /// Projects currently open in the Projects tab (innermost last), so that
@@ -58,7 +62,7 @@ class HomeShellState extends State<HomeShell> {
 
   void quickAdd({LocalDate? due}) {
     final ctx = _navigators[_index].currentContext ?? context;
-    final project = _index == 2 && _openProjects.isNotEmpty ? _openProjects.last : null;
+    final project = _index == _projectsTab && _openProjects.isNotEmpty ? _openProjects.last : null;
     QuickAdd.show(
       ctx,
       due: due ?? (_index == 0 ? AppScope.of(context).today.value : null),
@@ -69,8 +73,9 @@ class HomeShellState extends State<HomeShell> {
   Widget _tab(int i) {
     final child = switch (i) {
       0 => const AgendaScreen(),
-      1 => TasksScreen(searchFocus: _searchFocus),
-      2 => const ProjectsScreen(),
+      1 => const CalendarScreen(),
+      _tasksTab => TasksScreen(searchFocus: _searchFocus),
+      _projectsTab => const ProjectsScreen(),
       _ => SettingsScreen(dataPath: widget.dataPath),
     };
     return Navigator(
@@ -87,10 +92,12 @@ class HomeShellState extends State<HomeShell> {
     _visited.add(_index);
     final body = IndexedStack(
       index: _index,
-      children: [for (var i = 0; i < 4; i++) _visited.contains(i) ? _tab(i) : const SizedBox.shrink()],
+      children: [
+        for (var i = 0; i < _destinations.length; i++) _visited.contains(i) ? _tab(i) : const SizedBox.shrink(),
+      ],
     );
     // Projects provide their own buttons (new project / new task in project).
-    final fab = _index < 2
+    final fab = _index < _projectsTab
         ? FloatingActionButton(tooltip: 'New task (Ctrl+N)', onPressed: quickAdd, child: const Icon(Icons.add))
         : null;
 
@@ -161,11 +168,12 @@ class HomeShellState extends State<HomeShell> {
       child: CallbackShortcuts(
         bindings: {
           const SingleActivator(LogicalKeyboardKey.keyN, control: true): quickAdd,
-          const SingleActivator(LogicalKeyboardKey.keyF, control: true): () => select(1),
+          const SingleActivator(LogicalKeyboardKey.keyF, control: true): () => select(_tasksTab),
           const SingleActivator(LogicalKeyboardKey.digit1, control: true): () => select(0),
           const SingleActivator(LogicalKeyboardKey.digit2, control: true): () => select(1),
           const SingleActivator(LogicalKeyboardKey.digit3, control: true): () => select(2),
           const SingleActivator(LogicalKeyboardKey.digit4, control: true): () => select(3),
+          const SingleActivator(LogicalKeyboardKey.digit5, control: true): () => select(4),
         },
         child: Focus(autofocus: true, child: scaffold),
       ),

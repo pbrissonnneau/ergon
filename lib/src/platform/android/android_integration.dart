@@ -82,7 +82,7 @@ class AndroidIntegration extends PlatformIntegration {
     final items = <Map<String, Object?>>[];
     for (final s in agenda.sections) {
       for (final e in s.entries) {
-        if (e.isDone) continue; // The widget lists what is left to do.
+        if (!e.isOpen) continue; // The widget lists what is left to do.
         items.add({
           'id': e.task.id,
           't': e.task.title,

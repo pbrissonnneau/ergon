@@ -56,8 +56,9 @@ class AppSettings extends ChangeNotifier {
   int get themeMode => _int('ui.themeMode', 0);
   set themeMode(int v) => unawaited(_set('ui.themeMode', '$v'));
 
-  /// Desktop overlay: launched together with the main application.
-  bool get overlayEnabled => _bool('overlay.enabled', false);
+  /// Desktop overlay: launched together with the main application (on by
+  /// default; closing the overlay hides it only until the next start).
+  bool get overlayEnabled => _bool('overlay.enabled', true);
   set overlayEnabled(bool v) => unawaited(_set('overlay.enabled', v ? '1' : '0'));
 
   bool get overlayAlwaysOnTop => _bool('overlay.alwaysOnTop', true);
@@ -89,6 +90,14 @@ class AppSettings extends ChangeNotifier {
   /// Desktop: system-wide Ctrl+Alt+N opens the new-task dialog.
   bool get globalHotkeyEnabled => _bool('hotkey.enabled', true);
   set globalHotkeyEnabled(bool v) => unawaited(_set('hotkey.enabled', v ? '1' : '0'));
+
+  /// One-time upgrade: the overlay became "on by default" (it used to be
+  /// switched off when closed), so turn it back on once for existing users.
+  Future<void> upgradeOverlayDefault() async {
+    if (_values['overlay.defaultOn'] != null) return;
+    await _set('overlay.enabled', '1');
+    await _set('overlay.defaultOn', '1');
+  }
 
   String? raw(String key) => _values[key];
   Future<void> setRaw(String key, String value) => _set(key, value);

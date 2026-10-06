@@ -25,6 +25,9 @@ class Backlog extends StatelessWidget {
   final bool collapsed;
   final VoidCallback? onToggle;
 
+  /// Setting: '0' hides the backlog (agenda and calendar).
+  static const settingKey = 'agenda.backlog';
+
   static const query = TaskQuery(
     due: DueFilter.noDate,
     types: {TaskType.oneTime},

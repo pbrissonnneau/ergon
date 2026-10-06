@@ -40,7 +40,8 @@ abstract final class AgendaDrop {
     if (!inSection) {
       await app.tasks.rescheduleTasks([d.task.id], dateOf(s, app.clock.today()));
     }
-    final rest = s.entries.where((e) => e.key != key).toList();
+    // Postponed traces are not tasks of this day: they take no order.
+    final rest = s.entries.where((e) => e.key != key && !e.isPostponed).toList();
     var index = beforeKey == null ? rest.length : rest.indexWhere((e) => e.key == beforeKey);
     if (index < 0) index = rest.length;
     final order = <int>[for (final e in rest) e.task.id]..insert(index, d.task.id);

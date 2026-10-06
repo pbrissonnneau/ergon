@@ -7,6 +7,7 @@ import '../editor/quick_add.dart';
 import '../formatting.dart';
 import '../task_actions.dart';
 import '../theme.dart';
+import '../widgets/day_mosaic.dart';
 import '../widgets/live_query.dart';
 import '../widgets/task_drag.dart';
 
@@ -111,60 +112,32 @@ class _DaySquare extends StatelessWidget {
   final void Function(int taskId)? onOpenTask;
   final void Function(LocalDate day)? onNewTask;
 
-  static const _cell = 5.0;
-  static const _gap = 1.5;
+  static const _pad = 3.0;
 
   bool get _weekend => day.weekday >= DateTime.saturday;
-
-  void _newTask(BuildContext context) {
-    final create = onNewTask;
-    create != null ? create(day) : QuickAdd.show(context, due: day);
-  }
-
-  void _open(BuildContext context, int taskId) {
-    final open = onOpenTask;
-    open != null ? open(taskId) : TaskActions.open(context, taskId);
-  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isToday = day == today;
-    final perRow = ((size - 6 + _gap) / (_cell + _gap)).floor();
-    final capacity = perRow * perRow;
-    // Done first so the square "fills up" as work gets done.
-    final sorted = [...cells]..sort((a, b) => (b.done ? 1 : 0) - (a.done ? 1 : 0));
-    final shown = sorted.length > capacity ? sorted.sublist(0, capacity) : sorted;
-    final tooltip = cells.isEmpty
-        ? '${Fmt.longDate(day)}\nNothing scheduled · double-click to add'
-        : '${Fmt.longDate(day)}\n${cells.map((c) => '${c.done ? '✓' : '•'} ${c.title}').take(12).join('\n')}'
-              '${cells.length > 12 ? '\n… +${cells.length - 12} more' : ''}';
 
     Widget square(bool highlight) => Container(
       width: size,
       height: size,
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(_pad),
       decoration: BoxDecoration(
         // Weekends are a darker grey.
         color: highlight ? scheme.primaryContainer : scheme.onSurface.withValues(alpha: _weekend ? 0.20 : 0.08),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: isToday ? scheme.primary : Colors.transparent, width: 1.5),
       ),
-      child: Wrap(
-        spacing: _gap,
-        runSpacing: _gap,
-        children: [
-          for (final c in shown)
-            Container(
-              width: _cell,
-              height: _cell,
-              decoration: BoxDecoration(
-                color: AppTheme.projectColor(c.projectColor, scheme).withValues(alpha: c.done ? 1 : 0.5),
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-        ],
-      ),
+      // Drawn on top so it does not shrink the mosaic.
+      foregroundDecoration: isToday
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: scheme.primary, width: 1.5),
+            )
+          : null,
+      child: DayMosaic(cells: cells, size: size - 2 * _pad),
     );
 
     final target = DragTarget<TaskDragData>(
@@ -173,39 +146,83 @@ class _DaySquare extends StatelessWidget {
       builder: (context, candidate, _) => square(candidate.isNotEmpty),
     );
 
-    return Tooltip(
-      message: tooltip,
-      waitDuration: const Duration(milliseconds: 350),
-      child: Builder(
-        builder: (squareContext) => InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: () => compact ? _showDayCompact(squareContext) : _showDay(context),
-          onDoubleTap: () => _newTask(context),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              target,
-              if (!compact) ...[
-                const SizedBox(height: 2),
-                Text(
-                  '${Fmt.weekdayShort(day).substring(0, 2)} ${day.day}',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isToday ? scheme.primary : (_weekend ? scheme.onSurfaceVariant : scheme.outline),
-                    fontWeight: isToday || _weekend ? FontWeight.w700 : null,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    final label = compact
+        ? null
+        : Text(
+            '${Fmt.weekdayShort(day).substring(0, 2)} ${day.day}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: isToday ? scheme.primary : (_weekend ? scheme.onSurfaceVariant : scheme.outline),
+              fontWeight: isToday || _weekend ? FontWeight.w700 : null,
+            ),
+          );
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        target,
+        if (label != null) ...[const SizedBox(height: 2), label],
+      ],
     );
+
+    final tappable = Builder(
+      builder: (squareContext) {
+        void open() => DayPopup.show(
+          squareContext,
+          day: day,
+          cells: cells,
+          compact: compact,
+          onOpenTask: onOpenTask,
+          onNewTask: onNewTask,
+        );
+        // Overlay: no ink, no delay (the click opens the list immediately).
+        if (compact) {
+          return GestureDetector(behavior: HitTestBehavior.opaque, onTap: open, child: content);
+        }
+        return InkWell(borderRadius: BorderRadius.circular(6), onTap: open, child: content);
+      },
+    );
+    if (compact) return tappable;
+    return Tooltip(
+      message: cells.isEmpty
+          ? '${Fmt.longDate(day)}\nNothing scheduled · double-click to add'
+          : '${Fmt.longDate(day)}\n${cells.map((c) => '${c.done ? '✓' : '•'} ${c.title}').take(12).join('\n')}'
+                '${cells.length > 12 ? '\n… +${cells.length - 12} more' : ''}',
+      waitDuration: const Duration(milliseconds: 350),
+      child: tappable,
+    );
+  }
+}
+
+/// The list of a day's tasks, opened by clicking a day (mini calendar,
+/// calendar tab). The list opens on the first click without waiting; a
+/// second click right after (which closes it) counts as a double-click and
+/// creates a task for that day.
+abstract final class DayPopup {
+  static const _doubleClick = Duration(milliseconds: 400);
+
+  static Future<void> show(
+    BuildContext anchor, {
+    required LocalDate day,
+    required List<DayCell> cells,
+    bool compact = false,
+    void Function(int taskId)? onOpenTask,
+    void Function(LocalDate day)? onNewTask,
+  }) async {
+    final opened = DateTime.now();
+    final Object? choice = compact ? await _compact(anchor, day, cells) : await _sheet(anchor, day, cells);
+    if (!anchor.mounted) return;
+    final quickClose = choice == null && DateTime.now().difference(opened) < _doubleClick;
+    if (choice is int) {
+      onOpenTask != null ? onOpenTask(choice) : await TaskActions.open(anchor, choice);
+    } else if (choice == 'new' || quickClose) {
+      onNewTask != null ? onNewTask(day) : await QuickAdd.show(anchor, due: day);
+    }
   }
 
   /// Full day list (main window).
-  void _showDay(BuildContext context) {
+  static Future<Object?> _sheet(BuildContext context, LocalDate day, List<DayCell> cells) {
     final scheme = Theme.of(context).colorScheme;
-    showModalBottomSheet<void>(
+    return showModalBottomSheet<Object>(
       context: context,
       showDragHandle: true,
       constraints: const BoxConstraints(maxWidth: 560),
@@ -219,10 +236,7 @@ class _DaySquare extends StatelessWidget {
                 children: [
                   Expanded(child: Text(Fmt.longDate(day), style: Theme.of(context).textTheme.titleMedium)),
                   TextButton.icon(
-                    onPressed: () {
-                      Navigator.pop(sheet);
-                      _newTask(context);
-                    },
+                    onPressed: () => Navigator.pop(sheet, 'new'),
                     icon: const Icon(Icons.add),
                     label: const Text('New task'),
                   ),
@@ -238,10 +252,7 @@ class _DaySquare extends StatelessWidget {
                   color: AppTheme.projectColor(c.projectColor, scheme),
                 ),
                 title: Text(c.title, style: TextStyle(decoration: c.done ? TextDecoration.lineThrough : null)),
-                onTap: () {
-                  Navigator.pop(sheet);
-                  _open(context, c.taskId);
-                },
+                onTap: () => Navigator.pop(sheet, c.taskId),
               ),
           ],
         ),
@@ -249,18 +260,19 @@ class _DaySquare extends StatelessWidget {
     );
   }
 
-  /// Small popup anchored on the square (overlay window).
-  Future<void> _showDayCompact(BuildContext squareContext) async {
+  /// Small popup anchored under the square, without animation (overlay).
+  static Future<Object?> _compact(BuildContext squareContext, LocalDate day, List<DayCell> cells) {
     final theme = Theme.of(squareContext);
     final scheme = theme.colorScheme;
     final small = theme.textTheme.bodySmall;
     final box = squareContext.findRenderObject()! as RenderBox;
     final overlay = Overlay.of(squareContext).context.findRenderObject()! as RenderBox;
     final at = box.localToGlobal(box.size.bottomLeft(Offset.zero), ancestor: overlay);
-    final choice = await showMenu<Object>(
+    return showMenu<Object>(
       context: squareContext,
       position: RelativeRect.fromLTRB(at.dx, at.dy, overlay.size.width - at.dx, 0),
       constraints: const BoxConstraints(maxWidth: 240),
+      popUpAnimationStyle: AnimationStyle.noAnimation,
       items: [
         PopupMenuItem<Object>(
           enabled: false,
@@ -276,7 +288,7 @@ class _DaySquare extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  c.done ? Icons.check_circle : Icons.circle_outlined,
+                  c.done ? Icons.check_circle : Icons.radio_button_unchecked,
                   size: 12,
                   color: AppTheme.projectColor(c.projectColor, scheme),
                 ),
@@ -305,8 +317,5 @@ class _DaySquare extends StatelessWidget {
         ),
       ],
     );
-    if (!squareContext.mounted) return;
-    if (choice is int) _open(squareContext, choice);
-    if (choice == 'new') _newTask(squareContext);
   }
 }

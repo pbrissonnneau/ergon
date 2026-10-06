@@ -126,6 +126,26 @@ class ScheduledNotifications extends Table {
   IntColumn get deliveredAt => integer().nullable()();
 }
 
+/// A task moved away from a day (rescheduled). The original day keeps a
+/// struck-through trace ("postponed to …") until the end of the day it was
+/// postponed, and the history shows it. Added in schema v4.
+@DataClassName('PostponementRow')
+@TableIndex(name: 'idx_postponements_created', columns: {#createdAt})
+class Postponements extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get taskId => integer().references(Tasks, #id, onDelete: KeyAction.cascade)();
+
+  /// Due date the task was moved away from (epoch day).
+  IntColumn get fromDate => integer()();
+
+  /// New due date (epoch day); null = moved to the backlog (no date).
+  IntColumn get toDate => integer().nullable()();
+  IntColumn get createdAt => integer()();
+
+  /// Removed from the agenda by the user (like [Tasks.archivedAt]).
+  IntColumn get archivedAt => integer().nullable()();
+}
+
 @DataClassName('SettingRow')
 class Settings extends Table {
   TextColumn get key => text()();
@@ -135,7 +155,7 @@ class Settings extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [Projects, Tasks, Occurrences, Reminders, ScheduledNotifications, Settings])
+@DriftDatabase(tables: [Projects, Tasks, Occurrences, Reminders, ScheduledNotifications, Settings, Postponements])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
