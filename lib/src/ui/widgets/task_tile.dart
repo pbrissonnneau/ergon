@@ -5,6 +5,7 @@ import '../../app/app_services.dart';
 import '../../core/local_date.dart';
 import '../../domain/enums.dart';
 import '../../domain/models.dart';
+import '../bulk_actions.dart';
 import '../formatting.dart';
 import '../task_actions.dart';
 import '../theme.dart';
@@ -171,6 +172,32 @@ class TaskTile extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 icon: Icon(expanded == true ? Icons.expand_less : Icons.expand_more),
                 onPressed: onToggleExpanded,
+              ),
+            // Visible "postpone" for dated, open, one-off tasks (recurring
+            // occurrences follow their rule; use Skip in the actions).
+            if (!closed && occurrence == null && !task.isRecurring && task.dueDate != null && selected == null)
+              PopupMenuButton<RescheduleTarget>(
+                tooltip: 'Postpone',
+                icon: Icon(Icons.redo, size: 20, color: scheme.onSurfaceVariant),
+                onSelected: (target) async {
+                  final s = AppScope.of(context);
+                  final (cancelled, date) = await BulkActions.resolve(context, target, s.clock.today());
+                  if (!cancelled) await s.tasks.rescheduleTasks([task.id], date);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem<RescheduleTarget>(enabled: false, height: 28, child: Text('Postpone to…')),
+                  for (final t in RescheduleTarget.values.where((t) => t != RescheduleTarget.today))
+                    PopupMenuItem(
+                      value: t,
+                      child: Row(
+                        children: [
+                          Icon(t.icon, size: 18),
+                          const SizedBox(width: 10),
+                          Text(t == RescheduleTarget.noDate ? 'Backlog (no date)' : t.label),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             IconButton(
               tooltip: 'Actions',
