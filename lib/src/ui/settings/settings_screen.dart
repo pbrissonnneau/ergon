@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_services.dart';
 import '../../core/local_date.dart';
+import '../../services/activity_export.dart';
 import '../../services/backup_service.dart';
 import '../formatting.dart';
 
@@ -177,6 +178,8 @@ class SettingsScreen extends StatelessWidget {
                 ],
                 const _Header('Backups'),
                 const _BackupSection(),
+                const _Header('Activity export'),
+                const _ActivityExportSection(),
                 const _Header('Appearance'),
                 ListTile(
                   leading: const Icon(Icons.brightness_6_outlined),
@@ -267,6 +270,98 @@ class _AutostartTileState extends State<_AutostartTile> {
               final now = await platform.overlayAutostartEnabled();
               if (mounted) setState(() => _enabled = now);
             },
+    );
+  }
+}
+
+/// Regular YAML summary of what was done, written to a chosen folder.
+class _ActivityExportSection extends StatefulWidget {
+  const _ActivityExportSection();
+  @override
+  State<_ActivityExportSection> createState() => _ActivityExportSectionState();
+}
+
+class _ActivityExportSectionState extends State<_ActivityExportSection> {
+  bool _busy = false;
+
+  void _toast(String m) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
+
+  Future<void> _set(String key, String value) async {
+    final s = AppScope.of(context);
+    await s.settings.setRaw(key, value);
+    if (key == ActivityExportService.enabledKey && value == '1') {
+      // Turning it on exports the period that just ended right away.
+      try {
+        final files = await s.exports.runIfDue();
+        if (files.isNotEmpty) _toast('Exported ${files.map((f) => p.basename(f.path)).join(', ')}');
+      } catch (e) {
+        _toast('Export failed: $e');
+      }
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _exportNow() async {
+    setState(() => _busy = true);
+    try {
+      final f = await AppScope.of(context).exports.exportNow();
+      _toast('Exported ${p.basename(f.path)}');
+    } catch (e) {
+      _toast('Export failed: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _chooseFolder() async {
+    final s = AppScope.of(context);
+    final path = await getDirectoryPath(confirmButtonText: 'Use this folder', initialDirectory: s.exports.folder.path);
+    if (path == null) return;
+    await _set(ActivityExportService.folderKey, path);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ex = AppScope.of(context).exports;
+    final kind = ex.period;
+    return Column(
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.description_outlined),
+          title: const Text('Export my activity regularly'),
+          subtitle: Text(
+            'A small YAML file per ${kind == ExportPeriod.month ? 'month' : 'week'} '
+            '(tasks completed, postponed and created), written when the period ends',
+          ),
+          value: ex.enabled,
+          onChanged: (v) => _set(ActivityExportService.enabledKey, v ? '1' : '0'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.date_range),
+          title: const Text('Period'),
+          trailing: SegmentedButton<ExportPeriod>(
+            showSelectedIcon: false,
+            segments: [for (final k in ExportPeriod.values) ButtonSegment(value: k, label: Text(k.label))],
+            selected: {kind},
+            onSelectionChanged: (v) => _set(ActivityExportService.periodKey, v.first.code),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.folder_outlined),
+          title: const Text('Export folder'),
+          subtitle: SelectableText(ex.folder.path),
+          trailing: TextButton(onPressed: _chooseFolder, child: const Text('Change')),
+        ),
+        ListTile(
+          leading: const Icon(Icons.file_download_outlined),
+          title: Text('Export ${kind == ExportPeriod.month ? 'this month' : 'this week'} so far'),
+          trailing: _busy
+              ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : FilledButton.tonal(onPressed: _exportNow, child: const Text('Export now')),
+        ),
+      ],
     );
   }
 }

@@ -105,6 +105,9 @@ class DesktopIntegration extends PlatformIntegration {
     final running = await InstanceChannel.isRunning(dataDir, 'overlay');
     if (visible && !running) {
       await Process.start(Platform.resolvedExecutable, const ['--overlay'], mode: ProcessStartMode.detached);
+    } else if (visible) {
+      // Already running (maybe behind other windows): bring it to the front.
+      await InstanceChannel.send(dataDir, 'overlay', const IpcCommand(IpcCommand.show));
     } else if (!visible && running) {
       await InstanceChannel.send(dataDir, 'overlay', const IpcCommand(IpcCommand.close));
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_services.dart';
 import '../core/local_date.dart';
+import '../data/task_repository.dart';
 import '../domain/enums.dart';
 import '../domain/models.dart';
 import 'bulk_actions.dart';
@@ -232,14 +233,16 @@ class _QuickActionsSheet extends StatelessWidget {
             ],
             const SizedBox(height: 8),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.open_in_new),
-              title: const Text('Open task'),
-              onTap: () {
-                close();
-                TaskActions.open(hostContext, task.id);
-              },
-            ),
+            if (status.isOpen)
+              ListTile(
+                leading: const Icon(Icons.redo),
+                title: const Text('Close + follow-up tomorrow'),
+                subtitle: Text('Completes it and creates “${TaskRepository.followUpTitle(task.title)}” for tomorrow'),
+                onTap: () {
+                  close();
+                  s.tasks.followUp(task, occurrenceDate: occurrence?.date);
+                },
+              ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: scheme.error),
               title: Text('Delete', style: TextStyle(color: scheme.error)),

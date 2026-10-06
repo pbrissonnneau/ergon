@@ -10,6 +10,7 @@ import '../bulk_actions.dart';
 import '../editor/quick_add.dart';
 import '../formatting.dart';
 import '../widgets/live_query.dart';
+import '../widgets/overlay_button.dart';
 import '../widgets/task_tile.dart';
 import 'agenda_drop.dart';
 import 'agenda_view.dart';
@@ -29,6 +30,16 @@ class AgendaScreen extends StatefulWidget {
 
 class _AgendaScreenState extends State<AgendaScreen> {
   bool _overdueCollapsed = false;
+
+  /// Weeks shown by the mini calendar, relative to the current ones.
+  final _weekOffset = ValueNotifier<int>(0);
+
+  @override
+  void dispose() {
+    _weekOffset.dispose();
+    super.dispose();
+  }
+
   bool _backlogCollapsed = false;
 
   /// Keys of selected entries (multi-select); empty = normal mode.
@@ -111,28 +122,42 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 ),
                 if (wide) ...[
                   const SizedBox(width: 20),
-                  const Flexible(
-                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: WeekStrip()),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: WeekStrip(weekOffset: _weekOffset),
+                    ),
                   ),
                 ],
               ],
             ),
             bottom: wide
                 ? null
-                : const PreferredSize(
-                    preferredSize: Size.fromHeight(60),
+                : PreferredSize(
+                    preferredSize: const Size.fromHeight(60),
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: 6),
-                      child: FittedBox(fit: BoxFit.scaleDown, child: WeekStrip(square: 30)),
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: WeekStrip(square: 30, weekOffset: _weekOffset),
+                      ),
                     ),
                   ),
             actions: [
-              if ((agenda?.completedCount ?? 0) > 0 && !_selecting)
-                TextButton.icon(
-                  onPressed: s.tasks.archiveAllCompleted,
-                  icon: const Icon(Icons.clear_all, size: 18),
-                  label: Text('Clear completed (${agenda!.completedCount})'),
+              // Back to the current weeks of the mini calendar. Its space is
+              // always reserved so nothing moves when it appears.
+              ValueListenableBuilder<int>(
+                valueListenable: _weekOffset,
+                builder: (context, offset, _) => Visibility.maintain(
+                  visible: offset != 0,
+                  child: TextButton.icon(
+                    onPressed: () => _weekOffset.value = 0,
+                    icon: const Icon(Icons.today, size: 18),
+                    label: const Text('Today'),
+                  ),
                 ),
+              ),
               IconButton(
                 tooltip: _selecting ? 'Cancel selection' : 'Select tasks (or Ctrl+click)',
                 icon: Icon(_selecting ? Icons.close : Icons.checklist_rtl),
@@ -167,6 +192,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   ],
                 ),
               ),
+              const OverlayButton(),
               const SizedBox(width: 4),
             ],
           ),

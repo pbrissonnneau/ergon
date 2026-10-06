@@ -247,12 +247,13 @@ class TaskRepository {
     return db
         .customSelect(
           '''
-      SELECT t.id AS id, t.title AS title, p.color AS color, t.status AS status, t.due_date AS day, t.completed_at AS done_at
+      SELECT t.id AS id, t.title AS title, p.color AS color, p.name AS pname, t.due_minute AS minute,
+        t.status AS status, t.due_date AS day, t.completed_at AS done_at
       FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
       WHERE t.type != 2 AND t.status != 6 AND
         ((t.due_date BETWEEN ?1 AND ?2) OR (t.status = 2 AND t.completed_at >= ?3 AND t.completed_at < ?4))
       UNION ALL
-      SELECT t.id, t.title, p.color, o.status, o.date, o.completed_at
+      SELECT t.id, t.title, p.color, p.name, o.due_minute, o.status, o.date, o.completed_at
       FROM occurrences o JOIN tasks t ON t.id = o.task_id LEFT JOIN projects p ON p.id = t.project_id
       WHERE o.status != 6 AND o.date BETWEEN ?1 AND ?2''',
           variables: [
@@ -276,6 +277,8 @@ class TaskRepository {
                     taskId: r.read<int>('id'),
                     title: r.read<String>('title'),
                     projectColor: r.readNullable<int>('color'),
+                    projectName: r.readNullable<String>('pname'),
+                    minute: r.readNullable<int>('minute'),
                     done: done,
                   ),
                 );
@@ -344,6 +347,7 @@ class TaskRepository {
                 date: LocalDate.fromEpochDay(r.read<int>('o_date')),
                 dueMinute: r.readNullable<int>('o_due_minute'),
                 status: TaskStatus.completed,
+                completedAt: DateTime.fromMillisecondsSinceEpoch(r.read<int>('o_done'), isUtc: true),
               ),
             );
           }(),
@@ -355,6 +359,43 @@ class TaskRepository {
       ];
       return out;
     });
+  }
+
+  /// Closes [task] (or its [occurrenceDate] occurrence) and creates a
+  /// follow-up for tomorrow: "[FU] title", same project, priority and parent.
+  /// Returns the new task's id.
+  Future<int> followUp(Task task, {LocalDate? occurrenceDate}) => db.transaction(() async {
+    if (occurrenceDate != null) {
+      await setOccurrenceStatus(task.id, occurrenceDate, TaskStatus.completed);
+    } else {
+      await setStatus(task.id, TaskStatus.completed);
+    }
+    return createTask(
+      TaskDraft(
+        title: followUpTitle(task.title),
+        projectId: task.projectId,
+        parentId: task.parentId,
+        priority: task.priority,
+        dueDate: _today.addDays(1),
+      ),
+    );
+  });
+
+  static const followUpPrefix = '[FU] ';
+
+  /// "[FU] title" (no double prefix when following up a follow-up).
+  static String followUpTitle(String title) => title.startsWith(followUpPrefix) ? title : '$followUpPrefix$title';
+
+  /// Tasks created between [from] and [to] (inclusive local days).
+  Future<List<TaskListItem>> tasksCreatedBetween(LocalDate from, LocalDate to) async {
+    final rows = await db
+        .customSelect(
+          'SELECT $_listColumns $_listJoins WHERE t.created_at >= ? AND t.created_at < ? ORDER BY t.created_at',
+          variables: [Variable.withInt(_startOfDayMs(from)), Variable.withInt(_startOfDayMs(to.addDays(1)))],
+          readsFrom: {db.tasks, db.projects},
+        )
+        .get();
+    return rows.map(_listItem).toList();
   }
 
   /// Earliest completion date in the database (bounds history scrolling).

@@ -10,6 +10,7 @@ import '../agenda/week_strip.dart';
 import '../formatting.dart';
 import '../widgets/day_mosaic.dart';
 import '../widgets/live_query.dart';
+import '../widgets/overlay_button.dart';
 import '../widgets/task_drag.dart';
 
 /// Month calendar: one square per day holding a mosaic of the day's tasks in
@@ -43,7 +44,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
             titleSpacing: 16,
             title: Text('${Fmt.month(month.month)} ${month.year}'),
             actions: [
-              if (_offset != 0) TextButton(onPressed: () => setState(() => _offset = 0), child: const Text('Today')),
+              // Space always reserved: the arrows never move.
+              Visibility.maintain(
+                visible: _offset != 0,
+                child: TextButton(onPressed: () => setState(() => _offset = 0), child: const Text('Today')),
+              ),
               IconButton(
                 tooltip: 'Previous month',
                 icon: const Icon(Icons.chevron_left),
@@ -67,6 +72,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   );
                 },
               ),
+              const OverlayButton(),
               const SizedBox(width: 4),
             ],
           ),

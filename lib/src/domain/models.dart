@@ -218,10 +218,21 @@ DateTime? millisToLocal(int? v) => _ms(v);
 
 /// One little square of the mini calendar: a task (or occurrence) on a day.
 class DayCell {
-  const DayCell({required this.taskId, required this.title, this.projectColor, this.done = false});
+  const DayCell({
+    required this.taskId,
+    required this.title,
+    this.projectColor,
+    this.projectName,
+    this.minute,
+    this.done = false,
+  });
   final int taskId;
   final String title;
   final int? projectColor;
+  final String? projectName;
+
+  /// Due time (minute of day), if any.
+  final int? minute;
   final bool done;
 }
 

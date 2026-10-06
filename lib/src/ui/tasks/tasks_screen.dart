@@ -11,6 +11,7 @@ import '../editor/quick_add.dart';
 import '../home_shell.dart';
 import '../widgets/task_tile.dart';
 import '../widgets/live_query.dart';
+import '../widgets/overlay_button.dart';
 
 /// Global search with combinable filters.
 class TasksScreen extends StatefulWidget {
@@ -99,6 +100,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 ],
               )
             : const Text('Tasks'),
+        actions: const [OverlayButton(), SizedBox(width: 4)],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(108),
           child: Column(

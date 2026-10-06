@@ -14,6 +14,7 @@ import '../task_actions.dart';
 import '../tasks/tasks_screen.dart';
 import '../theme.dart';
 import '../widgets/live_query.dart';
+import '../widgets/overlay_button.dart';
 import '../widgets/task_drag.dart';
 
 /// Projects as a Kanban board: one vertical column per project, side by
@@ -31,7 +32,7 @@ class ProjectsScreen extends StatelessWidget {
         icon: const Icon(Icons.create_new_folder_outlined),
         label: const Text('New project'),
       ),
-      appBar: AppBar(title: const Text('Projects')),
+      appBar: AppBar(title: const Text('Projects'), actions: const [OverlayButton(), SizedBox(width: 4)]),
       body: const _SwimlaneBoard(),
     );
   }

@@ -12,6 +12,7 @@ import '../data/project_repository.dart';
 import '../data/settings_repository.dart';
 import '../data/task_repository.dart';
 import '../platform/platform_integration.dart';
+import '../services/activity_export.dart';
 import '../services/backup_service.dart';
 import '../services/reminder_host.dart';
 
@@ -30,6 +31,12 @@ class AppServices {
       settings: settings,
       dataDir: dataDir,
       defaultFolder: Directory(p.join(dataDir.path, 'backups')),
+      clock: clock,
+    );
+    exports = ActivityExportService(
+      tasks: tasks,
+      settings: settings,
+      defaultFolder: Directory(p.join(dataDir.path, 'activity')),
       clock: clock,
     );
     agenda = AgendaService(tasks);
@@ -65,6 +72,7 @@ class AppServices {
 
   final Directory dataDir;
   late final BackupService backups;
+  late final ActivityExportService exports;
 
   /// One-off message to show after start-up (e.g. result of a restore).
   String? startupMessage;
@@ -132,6 +140,8 @@ class AppServices {
     _reminderStart = Timer(reminderStartDelay, () => unawaited(reminders.start()));
     if (runBackups) {
       backups.defaultFolder = await platform.defaultBackupFolder(dataDir);
+      // Next to the backups folder by default (e.g. Documents/Ergon activity).
+      exports.defaultFolder = Directory(p.join(p.dirname(backups.defaultFolder.path), 'Ergon activity'));
       _backupTimer = Timer(const Duration(seconds: 5), () => unawaited(_dailyBackup()));
     }
   }
@@ -143,6 +153,11 @@ class AppServices {
       await backups.runIfDue();
     } catch (e) {
       debugPrint('Automatic backup failed: $e');
+    }
+    try {
+      await exports.runIfDue();
+    } catch (e) {
+      debugPrint('Activity export failed: $e');
     }
   }
 

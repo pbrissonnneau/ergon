@@ -65,10 +65,10 @@ void main() {
       env.clock.current = DateTime(2026, 10, 5, 11);
       await env.tasks.setStatus(b, TaskStatus.completed);
       final items = await env.tasks.watchCompleted(today.addDays(-7), today).first;
-      expect({for (final i in items) i.item.task.title: i.day}, {
-        'Done Friday': LocalDate(2026, 10, 2),
-        'Done today': today,
-      });
+      expect(
+        {for (final i in items) i.item.task.title: i.day},
+        {'Done Friday': LocalDate(2026, 10, 2), 'Done today': today},
+      );
       expect(await env.tasks.earliestCompletion(), LocalDate(2026, 10, 2));
     });
 

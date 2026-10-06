@@ -56,7 +56,7 @@ void main() {
     expect(find.text('Submit tax documents'), findsOneWidget, reason: 'completed work stays visible today');
     expect(find.byTooltip('Remove from agenda'), findsOneWidget);
 
-    await tester.tap(find.textContaining('Clear completed'));
+    await tester.tap(find.byTooltip('Remove from agenda'));
     await settle(tester);
     expect(find.text('Submit tax documents'), findsNothing);
     await tester.runAsync(() => services.db.close());

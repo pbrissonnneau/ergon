@@ -94,7 +94,18 @@ class OverlayIntegration extends DesktopIntegration {
   @override
   Future<void> start() async {
     _cmds = overlayChannel.commands.listen((cmd) async {
-      if (cmd.name == IpcCommand.close) await windowManager.close();
+      switch (cmd.name) {
+        case IpcCommand.close:
+          await windowManager.close();
+        case IpcCommand.show:
+          await windowManager.show();
+          // Raise above everything even when "always on top" is off.
+          if (!await windowManager.isAlwaysOnTop()) {
+            await windowManager.setAlwaysOnTop(true);
+            await windowManager.setAlwaysOnTop(false);
+          }
+          await windowManager.focus();
+      }
     });
     await overlayChannel.listen();
   }
@@ -565,16 +576,18 @@ class _OverlayList extends StatelessWidget {
         const PopupMenuDivider(),
         ...BulkActions.priorityItems(scheme, height: 34),
         const PopupMenuDivider(),
-        const PopupMenuItem<Object>(
-          value: 'open',
-          child: Row(children: [Icon(Icons.open_in_new, size: 18), SizedBox(width: 10), Text('Open in Ergon')]),
-        ),
+        if (!e.isDone)
+          const PopupMenuItem<Object>(
+            value: 'followup',
+            height: 34,
+            child: Row(children: [Icon(Icons.redo, size: 18), SizedBox(width: 10), Text('Close + follow-up tomorrow')]),
+          ),
       ],
     );
     if (choice == null || !context.mounted) return;
     switch (choice) {
-      case 'open':
-        onOpen(e.task.id);
+      case 'followup':
+        await s.tasks.followUp(e.task, occurrenceDate: e.occurrence?.date);
       case 'skip':
         await s.tasks.skipOccurrences(e.task.id, e.occurrence!.date);
       case 'toggle':

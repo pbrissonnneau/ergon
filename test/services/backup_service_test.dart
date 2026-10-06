@@ -72,11 +72,10 @@ void main() {
       await service.runIfDue();
     }
     final names = (await service.list()).map((b) => b.name).toList();
-    expect(names.where((n) => !n.contains('manual')), unorderedEquals([
-      'ergon-2026-10-04.sqlite',
-      'ergon-2026-10-05.sqlite',
-      'ergon-2026-10-06.sqlite',
-    ]));
+    expect(
+      names.where((n) => !n.contains('manual')),
+      unorderedEquals(['ergon-2026-10-04.sqlite', 'ergon-2026-10-05.sqlite', 'ergon-2026-10-06.sqlite']),
+    );
     expect(names, contains(p.basename(manual.path)));
     await service.db.close();
   });

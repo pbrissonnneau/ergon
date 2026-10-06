@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_services.dart';
 import '../../core/local_date.dart';
+import '../../domain/enums.dart';
 import '../../domain/models.dart';
 import '../editor/quick_add.dart';
 import '../formatting.dart';
@@ -27,9 +28,14 @@ class WeekStrip extends StatefulWidget {
     this.compact = false,
     this.onOpenTask,
     this.onNewTask,
+    this.weekOffset,
   });
 
   final double square;
+
+  /// Weeks shifted from the current ones; owned by the host so it can show
+  /// its own "Today" button (the strip itself never changes width).
+  final ValueNotifier<int>? weekOffset;
 
   /// Number of days shown, starting [daysBefore] days before today.
   final int days;
@@ -49,15 +55,23 @@ class WeekStrip extends StatefulWidget {
 }
 
 class _WeekStripState extends State<WeekStrip> {
-  int _weekOffset = 0;
+  final _ownOffset = ValueNotifier<int>(0);
+  ValueNotifier<int> get _offset => widget.weekOffset ?? _ownOffset;
+
+  @override
+  void dispose() {
+    _ownOffset.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
-    return ValueListenableBuilder<LocalDate>(
-      valueListenable: s.today,
-      builder: (context, today, _) {
-        final first = today.addDays(-widget.daysBefore + 7 * _weekOffset);
+    return ListenableBuilder(
+      listenable: Listenable.merge([s.today, _offset]),
+      builder: (context, _) {
+        final today = s.today.value;
+        final first = today.addDays(-widget.daysBefore + 7 * _offset.value);
         final last = first.addDays(widget.days - 1);
         return LiveQuery<Map<int, List<DayCell>>>(
           id: (first, last, today),
@@ -65,7 +79,7 @@ class _WeekStripState extends State<WeekStrip> {
           builder: (context, data) => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!widget.compact) _arrow(Icons.chevron_left, 'Previous week', () => setState(() => _weekOffset--)),
+              if (!widget.compact) _arrow(Icons.chevron_left, 'Previous week', () => _offset.value--),
               for (var i = 0; i < widget.days; i++) ...[
                 if (i > 0) SizedBox(width: widget.compact ? 3 : 4),
                 _DaySquare(
@@ -78,11 +92,7 @@ class _WeekStripState extends State<WeekStrip> {
                   onNewTask: widget.onNewTask,
                 ),
               ],
-              if (!widget.compact) ...[
-                _arrow(Icons.chevron_right, 'Next week', () => setState(() => _weekOffset++)),
-                if (_weekOffset != 0)
-                  TextButton(onPressed: () => setState(() => _weekOffset = 0), child: const Text('Today')),
-              ],
+              if (!widget.compact) ...[_arrow(Icons.chevron_right, 'Next week', () => _offset.value++)],
             ],
           ),
         );
@@ -219,43 +229,21 @@ abstract final class DayPopup {
     }
   }
 
-  /// Full day list (main window).
+  /// Day panel (main window): slides in from the right, full height.
   static Future<Object?> _sheet(BuildContext context, LocalDate day, List<DayCell> cells) {
-    final scheme = Theme.of(context).colorScheme;
-    return showModalBottomSheet<Object>(
+    return showGeneralDialog<Object>(
       context: context,
-      showDragHandle: true,
-      constraints: const BoxConstraints(maxWidth: 560),
-      builder: (sheet) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
-              child: Row(
-                children: [
-                  Expanded(child: Text(Fmt.longDate(day), style: Theme.of(context).textTheme.titleMedium)),
-                  TextButton.icon(
-                    onPressed: () => Navigator.pop(sheet, 'new'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('New task'),
-                  ),
-                ],
-              ),
-            ),
-            if (cells.isEmpty) const ListTile(title: Text('Nothing scheduled or completed this day')),
-            for (final c in cells)
-              ListTile(
-                dense: true,
-                leading: Icon(
-                  c.done ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: AppTheme.projectColor(c.projectColor, scheme),
-                ),
-                title: Text(c.title, style: TextStyle(decoration: c.done ? TextDecoration.lineThrough : null)),
-                onTap: () => Navigator.pop(sheet, c.taskId),
-              ),
-          ],
-        ),
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black26,
+      transitionDuration: const Duration(milliseconds: 160),
+      pageBuilder: (dialog, _, _) => _DayPanel(day: day, cells: cells, today: AppScope.of(context).today.value),
+      transitionBuilder: (_, animation, _, child) => SlideTransition(
+        position: Tween(
+          begin: const Offset(1, 0),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+        child: child,
       ),
     );
   }
@@ -316,6 +304,155 @@ abstract final class DayPopup {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DayPanel extends StatelessWidget {
+  const _DayPanel({required this.day, required this.cells, required this.today});
+  final LocalDate day;
+  final List<DayCell> cells;
+  final LocalDate today;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final open = cells.where((c) => !c.done).toList()
+      ..sort((a, b) => (a.minute ?? 1 << 20).compareTo(b.minute ?? 1 << 20));
+    final done = cells.where((c) => c.done).toList();
+    final rel = today.daysUntil(day);
+    final when = rel == 0 ? 'Today' : (rel == 1 ? 'Tomorrow' : (rel == -1 ? 'Yesterday' : null));
+
+    Widget row(DayCell c) => InkWell(
+      onTap: () => Navigator.pop(context, c.taskId),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppTheme.projectColor(c.projectColor, scheme),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              c.done ? Icons.check_circle : Icons.radio_button_unchecked,
+              size: 18,
+              color: c.done ? AppTheme.statusColor(TaskStatus.completed, scheme) : scheme.outline,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    c.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: c.done ? scheme.outline : null,
+                      decoration: c.done ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  if (c.projectName != null)
+                    Text(c.projectName!, style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline)),
+                ],
+              ),
+            ),
+            if (c.minute != null)
+              Text(MinuteOfDay.format(c.minute!), style: theme.textTheme.labelMedium?.copyWith(color: scheme.outline)),
+          ],
+        ),
+      ),
+    );
+
+    Widget label(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Text(
+        text,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: scheme.primary,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Material(
+        elevation: 8,
+        color: scheme.surfaceContainerLow,
+        child: SizedBox(
+          width: width < 480 ? width : 420,
+          height: double.infinity,
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 8, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (when != null)
+                              Text(when, style: theme.textTheme.labelLarge?.copyWith(color: scheme.primary)),
+                            Text(Fmt.longDate(day), style: theme.textTheme.titleLarge),
+                            Text(
+                              '${open.length} to do · ${done.length} done',
+                              style: theme.textTheme.bodySmall?.copyWith(color: scheme.outline),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context, 'close'),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => Navigator.pop(context, 'new'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New task on this day'),
+                  ),
+                ),
+                const Divider(height: 16),
+                Expanded(
+                  child: cells.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            'Nothing scheduled or completed this day.',
+                            style: theme.textTheme.bodyMedium?.copyWith(color: scheme.outline),
+                          ),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          children: [
+                            if (open.isNotEmpty) ...[label('TO DO'), for (final c in open) row(c)],
+                            if (done.isNotEmpty) ...[label('DONE'), for (final c in done) row(c)],
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
