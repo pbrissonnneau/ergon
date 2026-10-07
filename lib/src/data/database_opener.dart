@@ -10,7 +10,7 @@ import 'database.dart';
 /// WAL mode + a busy timeout let the desktop overlay process (and Android's
 /// notification-action isolate) read/write the same file safely.
 AppDatabase openAppDatabase(Directory dataDir) {
-  final file = File(p.join(dataDir.path, 'ergon.sqlite'));
+  final file = File(p.join(dataDir.path, 'overdue.sqlite'));
   return AppDatabase(
     NativeDatabase.createInBackground(
       file,

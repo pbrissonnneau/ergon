@@ -10,11 +10,12 @@ import 'package:window_manager/window_manager.dart';
 import 'src/app/app_services.dart';
 import 'src/core/local_date.dart';
 import 'src/core/startup_trace.dart';
-import 'src/app/ergon_app.dart';
+import 'src/app/overdue_app.dart';
 import 'src/data/database_opener.dart';
 import 'src/data/task_repository.dart';
 import 'src/platform/desktop/desktop_integration.dart';
 import 'src/platform/desktop/instance_ipc.dart';
+import 'src/platform/desktop/legacy_migration.dart';
 import 'src/platform/platform_integration.dart';
 import 'src/services/backup_service.dart';
 import 'src/services/notifications/local_notifications_gateway.dart';
@@ -23,10 +24,10 @@ import 'src/services/notifications/notification_reconciler.dart';
 import 'src/ui/overlay/overlay_app.dart';
 
 /// Command line (desktop):
-///   ergon                    open the main window (or focus the running one)
-///   ergon --open-task=ID     open a task
-///   ergon --new-task         open the quick-add dialog
-///   ergon --overlay          run the compact desktop overlay
+///   overdue                  open the main window (or focus the running one)
+///   overdue --open-task=ID   open a task
+///   overdue --new-task       open the quick-add dialog
+///   overdue --overlay        run the compact desktop overlay
 Future<void> main(List<String> args) async {
   StartupTrace.mark('main');
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,7 @@ Future<void> main(List<String> args) async {
   await dataDir.create(recursive: true);
 
   final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  if (isDesktop) await LegacyDataMigration.run(dataDir);
   if (isDesktop && args.contains('--overlay')) {
     await runOverlay(dataDir);
     return;
@@ -87,7 +89,7 @@ Future<void> main(List<String> args) async {
   final services = await servicesFuture;
   services.startupMessage = restoreMessage;
   StartupTrace.mark('services');
-  runApp(ErgonApp(services: services, dataPath: dataDir.path));
+  runApp(OverdueApp(services: services, dataPath: dataDir.path));
 
   // Everything else happens after the first frame so start-up stays instant.
   WidgetsBinding.instance.addPostFrameCallback((_) async {

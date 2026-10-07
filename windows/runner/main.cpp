@@ -23,7 +23,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
-  // `ergon --overlay` runs the compact desktop overlay instead of the main
+  // `overdue --overlay` runs the compact desktop overlay instead of the main
   // window (same executable, separate process).
   const bool overlay =
       std::find(command_line_arguments.begin(), command_line_arguments.end(),
@@ -35,7 +35,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   Win32Window::Point origin(10, 10);
   Win32Window::Size size = overlay ? Win32Window::Size(320, 420)
                                    : Win32Window::Size(1100, 760);
-  if (!window.Create(overlay ? L"Ergon overlay" : L"Ergon", origin, size)) {
+  if (!window.Create(overlay ? L"Overdue overlay" : L"Overdue", origin, size)) {
     return EXIT_FAILURE;
   }
   if (overlay) {

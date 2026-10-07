@@ -1,8 +1,8 @@
-package app.ergon.ergon
+package app.overdue.overdue
 
 import android.content.Intent
-import app.ergon.ergon.widget.AgendaWidgetProvider
-import app.ergon.ergon.widget.WidgetStore
+import app.overdue.overdue.widget.AgendaWidgetProvider
+import app.overdue.overdue.widget.WidgetStore
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -63,9 +63,9 @@ class MainActivity : FlutterActivity() {
     }
 
     companion object {
-        const val CHANNEL = "app.ergon/platform"
-        const val ACTION_OPEN_TASK = "app.ergon.action.OPEN_TASK"
-        const val ACTION_QUICK_ADD = "app.ergon.action.QUICK_ADD"
-        const val EXTRA_TASK_ID = "ergon_task_id"
+        const val CHANNEL = "app.overdue/platform"
+        const val ACTION_OPEN_TASK = "app.overdue.action.OPEN_TASK"
+        const val ACTION_QUICK_ADD = "app.overdue.action.QUICK_ADD"
+        const val EXTRA_TASK_ID = "overdue_task_id"
     }
 }

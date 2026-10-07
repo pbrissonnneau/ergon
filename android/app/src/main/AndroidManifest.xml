@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Ergon is 100% offline: make sure no dependency can add network access
+    <!-- Overdue is 100% offline: make sure no dependency can add network access
          to release builds. (Debug builds keep it only for Flutter tooling.) -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
 
@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
-        android:label="Ergon"
+        android:label="Overdue"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -53,7 +53,7 @@
         <receiver
             android:name=".widget.AgendaWidgetProvider"
             android:exported="true"
-            android:label="Ergon · Today">
+            android:label="Overdue · Today">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.DATE_CHANGED" />

@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
-import 'package:ergon/src/core/local_date.dart';
-import 'package:ergon/src/data/database_opener.dart';
-import 'package:ergon/src/data/settings_repository.dart';
-import 'package:ergon/src/data/task_repository.dart';
-import 'package:ergon/src/domain/models.dart';
-import 'package:ergon/src/services/backup_service.dart';
+import 'package:overdue/src/core/local_date.dart';
+import 'package:overdue/src/data/database_opener.dart';
+import 'package:overdue/src/data/settings_repository.dart';
+import 'package:overdue/src/data/task_repository.dart';
+import 'package:overdue/src/domain/models.dart';
+import 'package:overdue/src/services/backup_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -16,7 +16,7 @@ void main() {
   late FixedClock clock;
 
   setUp(() async {
-    root = await Directory.systemTemp.createTemp('ergon_backup_');
+    root = await Directory.systemTemp.createTemp('overdue_backup_');
     dataDir = Directory(p.join(root.path, 'data'))..createSync();
     backupDir = Directory(p.join(root.path, 'backups'));
     clock = FixedClock(DateTime(2026, 10, 5, 9));
@@ -31,8 +31,8 @@ void main() {
   }
 
   Future<List<String>> titlesIn(File dbFile) async {
-    final dir = await Directory.systemTemp.createTemp('ergon_check_');
-    await dbFile.copy(p.join(dir.path, 'ergon.sqlite'));
+    final dir = await Directory.systemTemp.createTemp('overdue_check_');
+    await dbFile.copy(p.join(dir.path, 'overdue.sqlite'));
     final db = openAppDatabase(dir);
     final titles = (await db.select(db.tasks).get()).map((t) => t.title).toList();
     await db.close();
@@ -46,12 +46,12 @@ void main() {
     await tasks.createTask(TaskDraft(title: 'Learn Spanish'));
 
     final f = await service.runIfDue();
-    expect(p.basename(f!.path), 'ergon-2026-10-05.sqlite');
+    expect(p.basename(f!.path), 'overdue-2026-10-05.sqlite');
     expect(await titlesIn(f), ['Pay rent', 'Learn Spanish']);
     expect(await service.runIfDue(), isNull, reason: 'already done today');
 
     clock.current = DateTime(2026, 10, 6, 9);
-    expect(p.basename((await service.runIfDue())!.path), 'ergon-2026-10-06.sqlite');
+    expect(p.basename((await service.runIfDue())!.path), 'overdue-2026-10-06.sqlite');
     await service.db.close();
   });
 
@@ -74,7 +74,7 @@ void main() {
     final names = (await service.list()).map((b) => b.name).toList();
     expect(
       names.where((n) => !n.contains('manual')),
-      unorderedEquals(['ergon-2026-10-04.sqlite', 'ergon-2026-10-05.sqlite', 'ergon-2026-10-06.sqlite']),
+      unorderedEquals(['overdue-2026-10-04.sqlite', 'overdue-2026-10-05.sqlite', 'overdue-2026-10-06.sqlite']),
     );
     expect(names, contains(p.basename(manual.path)));
     await service.db.close();
@@ -94,7 +94,7 @@ void main() {
 
     (service, tasks, _) = await open();
     expect((await service.db.select(service.db.tasks).get()).map((t) => t.title), ['Before backup']);
-    final safety = (await service.list()).firstWhere((b) => b.name.startsWith('ergon-before-restore-'));
+    final safety = (await service.list()).firstWhere((b) => b.name.startsWith('overdue-before-restore-'));
     expect(await titlesIn(safety.file), containsAll(['Before backup', 'Added after backup']));
     await service.db.close();
   });

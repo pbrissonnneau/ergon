@@ -14,7 +14,7 @@ import '../platform_integration.dart';
 
 /// Android: OS-scheduled notifications + home-screen widget bridge.
 class AndroidIntegration extends PlatformIntegration {
-  static const channel = MethodChannel('app.ergon/platform');
+  static const channel = MethodChannel('app.overdue/platform');
 
   final _open = StreamController<int>.broadcast();
   final _add = StreamController<LocalDate?>.broadcast();

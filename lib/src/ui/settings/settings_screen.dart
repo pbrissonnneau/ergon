@@ -59,7 +59,7 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: Text(
                     s.reminders.isActive
                         ? 'Local notifications only — no network involved'
-                        : 'Reminders are currently delivered by the Ergon overlay process',
+                        : 'Reminders are currently delivered by the Overdue overlay process',
                   ),
                   value: st.notificationsEnabled,
                   onChanged: (v) async {
@@ -119,7 +119,7 @@ class SettingsScreen extends StatelessWidget {
                       secondary: const Icon(Icons.keyboard_outlined),
                       title: const Text('Global shortcut Ctrl+Alt+N'),
                       subtitle: const Text(
-                        'Opens “New task” from any application, even when Ergon is in the background',
+                        'Opens “New task” from any application, even when Overdue is in the background',
                       ),
                       value: st.globalHotkeyEnabled,
                       onChanged: (v) => st.globalHotkeyEnabled = v,
@@ -140,7 +140,7 @@ class SettingsScreen extends StatelessWidget {
                     secondary: const Icon(Icons.picture_in_picture_alt_outlined),
                     title: const Text('Show overlay'),
                     subtitle: const Text(
-                      'Compact, movable agenda summary on the desktop, shown when Ergon starts '
+                      'Compact, movable agenda summary on the desktop, shown when Overdue starts '
                       '(its × hides it until the next start)',
                     ),
                     value: st.overlayEnabled,
@@ -200,7 +200,7 @@ class SettingsScreen extends StatelessWidget {
                   leading: Icon(Icons.wifi_off),
                   title: Text('100% offline'),
                   subtitle: Text(
-                    'Ergon never connects to the Internet: no accounts, sync, analytics, telemetry, '
+                    'Overdue never connects to the Internet: no accounts, sync, analytics, telemetry, '
                     'crash reporting or ads. Links in descriptions open in your own browser only when you click them.',
                   ),
                 ),
@@ -211,7 +211,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const AboutListTile(
                   icon: Icon(Icons.info_outline),
-                  applicationName: 'Ergon',
+                  applicationName: 'Overdue',
                   applicationVersion: '1.0.0',
                   applicationLegalese: 'Offline task manager. All data stays on this device.',
                 ),
@@ -440,8 +440,8 @@ class _BackupSectionState extends State<_BackupSection> {
         title: const Text('Restore this backup?'),
         content: Text(
           'All current data will be replaced by “${chosen.name}”.\n\n'
-          'A copy of the current data is saved first (ergon-before-restore-….sqlite in the backup folder), '
-          'so this can be undone. Ergon restarts to apply it.',
+          'A copy of the current data is saved first (overdue-before-restore-….sqlite in the backup folder), '
+          'so this can be undone. Overdue restarts to apply it.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),

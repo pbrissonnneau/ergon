@@ -140,8 +140,8 @@ class AppServices {
     _reminderStart = Timer(reminderStartDelay, () => unawaited(reminders.start()));
     if (runBackups) {
       backups.defaultFolder = await platform.defaultBackupFolder(dataDir);
-      // Next to the backups folder by default (e.g. Documents/Ergon activity).
-      exports.defaultFolder = Directory(p.join(p.dirname(backups.defaultFolder.path), 'Ergon activity'));
+      // Next to the backups folder by default (e.g. Documents/Overdue activity).
+      exports.defaultFolder = Directory(p.join(p.dirname(backups.defaultFolder.path), 'Overdue activity'));
       _backupTimer = Timer(const Duration(seconds: 5), () => unawaited(_dailyBackup()));
     }
   }

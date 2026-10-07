@@ -1,8 +1,8 @@
-import 'package:ergon/src/core/local_date.dart';
-import 'package:ergon/src/domain/enums.dart';
-import 'package:ergon/src/domain/models.dart';
-import 'package:ergon/src/domain/recurrence.dart';
-import 'package:ergon/src/domain/task_query.dart';
+import 'package:overdue/src/core/local_date.dart';
+import 'package:overdue/src/domain/enums.dart';
+import 'package:overdue/src/domain/models.dart';
+import 'package:overdue/src/domain/recurrence.dart';
+import 'package:overdue/src/domain/task_query.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';

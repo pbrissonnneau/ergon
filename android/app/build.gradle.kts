@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "app.ergon.ergon"
+    namespace = "app.overdue.overdue"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -17,7 +17,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "app.ergon.ergon"
+        applicationId = "app.overdue.overdue"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

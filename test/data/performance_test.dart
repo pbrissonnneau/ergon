@@ -1,4 +1,4 @@
-import 'package:ergon/src/domain/task_query.dart';
+import 'package:overdue/src/domain/task_query.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';

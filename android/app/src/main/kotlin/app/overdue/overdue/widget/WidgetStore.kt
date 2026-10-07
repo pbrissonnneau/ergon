@@ -1,4 +1,4 @@
-package app.ergon.ergon.widget
+package app.overdue.overdue.widget
 
 import android.content.Context
 import org.json.JSONObject
@@ -23,7 +23,7 @@ data class WidgetItem(
  * if the app has not run since.
  */
 object WidgetStore {
-    private const val PREFS = "ergon_widget"
+    private const val PREFS = "overdue_widget"
     private const val KEY = "agenda"
 
     fun save(context: Context, json: String) {

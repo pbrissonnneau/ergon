@@ -225,7 +225,7 @@ class _MarkdownViewState extends State<MarkdownView> {
   Future<void> _openLink(String href) async {
     final uri = Uri.tryParse(href);
     if (uri == null || !uri.hasScheme) return;
-    // Hand the link to the OS (browser / mail client); Ergon never fetches it.
+    // Hand the link to the OS (browser / mail client); Overdue never fetches it.
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

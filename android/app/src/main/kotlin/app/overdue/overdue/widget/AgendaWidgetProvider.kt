@@ -1,4 +1,4 @@
-package app.ergon.ergon.widget
+package app.overdue.overdue.widget
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -9,8 +9,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.widget.RemoteViews
-import app.ergon.ergon.MainActivity
-import app.ergon.ergon.R
+import app.overdue.overdue.MainActivity
+import app.overdue.overdue.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

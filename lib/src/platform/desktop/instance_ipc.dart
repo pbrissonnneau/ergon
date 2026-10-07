@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// A command sent from one Ergon process to another.
+/// A command sent from one Overdue process to another.
 class IpcCommand {
   const IpcCommand(this.name, [this.args = const {}]);
   final String name;
