@@ -12,7 +12,7 @@ class GlobalHotkey {
   GlobalHotkey(this.onPressed);
 
   final VoidCallback onPressed;
-  static const _channel = MethodChannel('app.ergon/hotkey');
+  static const _channel = MethodChannel('app.overdue/hotkey');
   Timer? _retry;
   bool _registered = false;
   bool _enabled = false;

@@ -1,19 +1,19 @@
 [Desktop Entry]
 Type=Application
-Name=Ergon
+Name=Overdue
 GenericName=Task manager
 Comment=Offline task manager and agenda
-Exec=ergon %U
-Icon=app.ergon.ergon
+Exec=overdue %U
+Icon=app.overdue.overdue
 Terminal=false
 Categories=Office;ProjectManagement;Utility;
-StartupWMClass=app.ergon.ergon
+StartupWMClass=app.overdue.overdue
 Actions=new-task;overlay;
 
 [Desktop Action new-task]
 Name=New task
-Exec=ergon --new-task
+Exec=overdue --new-task
 
 [Desktop Action overlay]
 Name=Show overlay
-Exec=ergon --overlay
+Exec=overdue --overlay

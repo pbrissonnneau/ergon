@@ -9,16 +9,16 @@ import '../ui/theme.dart';
 import 'app_services.dart';
 
 /// Root widget of the main window / phone app.
-class ErgonApp extends StatefulWidget {
-  const ErgonApp({super.key, required this.services, required this.dataPath});
+class OverdueApp extends StatefulWidget {
+  const OverdueApp({super.key, required this.services, required this.dataPath});
   final AppServices services;
   final String dataPath;
 
   @override
-  State<ErgonApp> createState() => _ErgonAppState();
+  State<OverdueApp> createState() => _OverdueAppState();
 }
 
-class _ErgonAppState extends State<ErgonApp> with WidgetsBindingObserver {
+class _OverdueAppState extends State<OverdueApp> with WidgetsBindingObserver {
   StreamSubscription<int>? _openSub;
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   StreamSubscription<LocalDate?>? _addSub;
@@ -75,7 +75,7 @@ class _ErgonAppState extends State<ErgonApp> with WidgetsBindingObserver {
       child: ListenableBuilder(
         listenable: s.settings,
         builder: (context, _) => MaterialApp(
-          title: 'Ergon',
+          title: 'Overdue',
           scaffoldMessengerKey: _messenger,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),

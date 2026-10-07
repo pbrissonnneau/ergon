@@ -36,9 +36,9 @@ bool FlutterWindow::OnCreate() {
 
   // Global shortcut: Dart asks to (un)register it; WM_HOTKEY is reported back.
   // Only one process can own a given hotkey, so registration may fail while
-  // another Ergon window (main or overlay) holds it; Dart retries.
+  // another Overdue window (main or overlay) holds it; Dart retries.
   hotkey_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      flutter_controller_->engine()->messenger(), "app.ergon/hotkey",
+      flutter_controller_->engine()->messenger(), "app.overdue/hotkey",
       &flutter::StandardMethodCodec::GetInstance());
   hotkey_channel_->SetMethodCallHandler(
       [this](const flutter::MethodCall<flutter::EncodableValue>& call,

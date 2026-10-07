@@ -1,4 +1,4 @@
-# Ergon
+# Overdue
 
 A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, built with Flutter.
 
@@ -23,7 +23,7 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 | Agenda | *Today* (urgent, due today, ongoing, recurring), *Overdue*, and optional *Upcoming* days (none / tomorrow / 3 / 7 / 14 / 30). Complete, change status/priority, snooze and expand subtasks inline. Completed work stays visible (green) for the rest of the day and disappears the next day; remove it earlier with its ×. Unfinished work is never dropped: it moves to *Overdue*. Postpone a task with its ↷ button (tomorrow, next Monday, a date or the backlog) or by dragging it onto another day; it leaves a red struck-through trace ("Postponed to Thu") on the day it left until the end of the day, and in the history. |
 | Backlog | Open tasks without a date stay visible next to the agenda (side panel on wide windows, a section below the agenda on phones; toggle with the inbox button). Plan one by dragging it onto a day of the agenda or the mini calendar, or with its calendar button; drag a dated task back onto the backlog to remove its date. |
 | Search | Instant full-text search (SQLite FTS5, prefix matching) across titles, descriptions and project names, combinable with project / status / priority / type / due date / completion filters and sorting. |
-| Desktop overlay | Compact, movable, resizable, optionally always-on-top agenda summary with the mini calendar; click the circle to mark a task done (green check), type a title in the field at the bottom and press Enter to add a task for today, click an item to open it in the main app, right-click for Complete / Reschedule / Priority (right-click *OVERDUE* to move them all), drag a line onto a day square to move it. Shown by default when Ergon starts (its × hides it until the next start); the overlay button at the top right of the main window brings it back on top. Remembers position/size, opacity and visibility; can start at login. |
+| Desktop overlay | Compact, movable, resizable, optionally always-on-top agenda summary with the mini calendar; click the circle to mark a task done (green check), type a title in the field at the bottom and press Enter to add a task for today, click an item to open it in the main app, right-click for Complete / Reschedule / Priority (right-click *OVERDUE* to move them all), drag a line onto a day square to move it. Shown by default when Overdue starts (its × hides it until the next start); the overlay button at the top right of the main window brings it back on top. Remembers position/size, opacity and visibility; can start at login. |
 | Android widget | Home-screen widget with today's and overdue tasks; tap to open a task, **+** to create one. |
 | Calendar | A month view (*Calendar* tab): one square per day with its tasks as tiny cells in project colours; opens on the current month with today highlighted. Click a day for its panel, double-click to add a task, drop a task (e.g. from the backlog shown beside it) on a day to move it. |
 | Mini calendar | 14 grey squares (from 3 days ago; weekends darker) split into tiny cells in project colours (done = solid; a small number when there are too many). Hover for the list, click for the day, double-click to add a task on that day, drop a task on a day to move it. |
@@ -32,9 +32,9 @@ A fast, fully offline task manager for **Windows, Ubuntu/Linux and Android**, bu
 | Drag and drop | Desktop: in the agenda, drag to reorder tasks within a day (the order is remembered) or onto another day to change its due date; drag onto a project (a drop bar appears), a project column, or a day of the mini calendar. |
 | Follow-up | *Close + follow-up tomorrow* (right-click in the app or the overlay): completes the task and creates “[FU] title” for tomorrow in the same project. |
 | Activity export | Optional (*Settings → Activity export*): a small YAML file per month or week with the tasks completed, postponed and created, written to a folder you choose when the period ends; *Export now* writes the current period so far. |
-| Backups | Daily automatic copy of the database (default *Documents/Ergon backups*, 30 kept), *Back up now*, and *Restore* (a safety copy of the current data is made first). |
+| Backups | Daily automatic copy of the database (default *Documents/Overdue backups*, 30 kept), *Back up now*, and *Restore* (a safety copy of the current data is made first). |
 
-Keyboard (desktop): `Ctrl+Alt+N` new task from anywhere (Windows global shortcut; on Linux bind a system shortcut to `ergon --new-task`), `Ctrl+N` new task, `Ctrl+Enter` saves (new-task dialog and editor, also from description fields), `Ctrl+F` search,
+Keyboard (desktop): `Ctrl+Alt+N` new task from anywhere (Windows global shortcut; on Linux bind a system shortcut to `overdue --new-task`), `Ctrl+N` new task, `Ctrl+Enter` saves (new-task dialog and editor, also from description fields), `Ctrl+F` search,
 `Ctrl+1…5` switch sections, `Esc` closes the editor.
 
 ## Building
@@ -49,7 +49,7 @@ flutter build windows --release   # on Windows with Visual Studio (Desktop C++)
 flutter build apk --release       # Android SDK + NDK
 ```
 
-Linux per-user install (no root): `linux/packaging/install-user.sh` copies the bundle to `~/.local/share/ergon`
+Linux per-user install (no root): `linux/packaging/install-user.sh` copies the bundle to `~/.local/share/overdue`
 and adds a desktop launcher (with *New task* and *Show overlay* actions).
 
 Notes:
@@ -69,17 +69,17 @@ publishes it as an **AES-256 encrypted 7z archive** (file names encrypted too).
 1. Once: add the repository secret `RELEASE_ARCHIVE_PASSWORD` (*Settings → Secrets and variables → Actions*).
 2. Push, or run *Actions → Windows release → Run workflow*. Pushing a `v*` tag also attaches the archive to a
    GitHub Release.
-3. Download the artifact from the run page, unzip the GitHub wrapper, then open `ergon-windows-x64-*.7z` with 7-Zip
-   using your password and run `ergon.exe` (keep the folder together; no installation or admin rights needed).
+3. Download the artifact from the run page, unzip the GitHub wrapper, then open `overdue-windows-x64-*.7z` with 7-Zip
+   using your password and run `overdue.exe` (keep the folder together; no installation or admin rights needed).
    A `.sha256` checksum is included.
 
 ## Command line (desktop)
 
 ```
-ergon                    open the main window, or focus the running one
-ergon --open-task=ID     open a task (forwarded to the running window)
-ergon --new-task         open the quick-add dialog
-ergon --overlay          run the compact overlay
+overdue                  open the main window, or focus the running one
+overdue --open-task=ID   open a task (forwarded to the running window)
+overdue --new-task       open the quick-add dialog
+overdue --overlay        run the compact overlay
 ```
 
 ## Architecture
@@ -135,7 +135,7 @@ Key decisions:
   small normal window. The main application is unaffected.
 - **Windows overlay** is a native tool window (`WS_EX_TOOLWINDOW`, topmost; no taskbar/Alt+Tab entry). The overlay
   calls `AllowSetForegroundWindow` so the main window can come to the front when you click a task.
-- **Windows notifications** are registered for the current user (AUMID `Ergon.TaskManager`), no installer or
+- **Windows notifications** are registered for the current user (AUMID `Overdue.TaskManager`), no installer or
   elevation required.
 - **Android** asks for notification permission and (Android 12+) exact alarms from *Settings → Check notification
   permission*; without exact alarms reminders still fire, possibly a few minutes late. Cloud backup of app data is
@@ -146,11 +146,18 @@ Key decisions:
 
 | Platform | Location |
 |---|---|
-| Linux | `~/.local/share/app.ergon.ergon/` |
-| Windows | `%APPDATA%\Ergon\Ergon\` |
+| Linux | `~/.local/share/app.overdue.overdue/` |
+| Windows | `%APPDATA%\Overdue\Overdue\` |
 | Android | app-private storage (excluded from cloud backup) |
 
-The exact path is shown in *Settings → Data location*. Copy `ergon.sqlite` (with the app closed) to back up.
+The exact path is shown in *Settings → Data location*. Copy `overdue.sqlite` (with the app closed) to back up.
+
+**Coming from Ergon** (the app's former name): on Linux and Windows, the first start without data copies the old
+folder (`~/.local/share/app.ergon.ergon/`, `%APPDATA%\Ergon\Ergon\`), which is left in place; the default
+*Ergon backups* / *Ergon activity* folders are renamed and the overlay's start-at-login entry is re-registered.
+Old `ergon-….sqlite` backups stay listed in *Restore*. On Android the new id makes it a separate app with its own
+storage: use *Back up now* in Ergon, copy the file from `Android/data/app.ergon.ergon/files/backups/` to
+`Android/data/app.overdue.overdue/files/backups/` (USB / file manager), then *Restore* it in Overdue.
 
 ## Database migrations
 

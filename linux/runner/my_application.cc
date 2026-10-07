@@ -33,7 +33,7 @@ static gboolean is_overlay(MyApplication* self) {
 // compositors may ignore these hints; the overlay then behaves like a normal
 // small window and the main application is unaffected.
 static void configure_overlay_window(GtkWindow* window) {
-  gtk_window_set_title(window, "Ergon overlay");
+  gtk_window_set_title(window, "Overdue overlay");
   gtk_window_set_decorated(window, FALSE);
   gtk_window_set_type_hint(window, GDK_WINDOW_TYPE_HINT_UTILITY);
   gtk_window_set_skip_taskbar_hint(window, TRUE);
@@ -63,11 +63,11 @@ static void configure_main_window(GtkWindow* window) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "Ergon");
+    gtk_header_bar_set_title(header_bar, "Overdue");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "Ergon");
+    gtk_window_set_title(window, "Overdue");
   }
 
   gtk_window_set_default_size(window, 1100, 760);

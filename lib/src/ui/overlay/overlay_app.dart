@@ -22,7 +22,7 @@ import '../formatting.dart';
 import '../theme.dart';
 import '../widgets/task_drag.dart';
 
-/// Entry point of the compact desktop overlay process (`ergon --overlay`).
+/// Entry point of the compact desktop overlay process (`overdue --overlay`).
 ///
 /// It is the same executable as the main app, running a different UI: a
 /// small frameless, movable, resizable, optionally always-on-top window that
@@ -37,7 +37,7 @@ Future<void> runOverlay(Directory dataDir) async {
 
   await windowManager.ensureInitialized();
   final options = WindowOptions(
-    title: 'Ergon overlay',
+    title: 'Overdue overlay',
     size: bounds?.size ?? const Size(320, 420),
     minimumSize: const Size(220, 140),
     skipTaskbar: true,
@@ -214,7 +214,7 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
       services: s,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Ergon overlay',
+        title: 'Overdue overlay',
         // Overlay: no ink ripples (instant, quiet UI).
         theme: AppTheme.light().copyWith(splashFactory: NoSplash.splashFactory),
         darkTheme: AppTheme.dark().copyWith(splashFactory: NoSplash.splashFactory),
@@ -235,7 +235,7 @@ class _OverlayAppState extends State<OverlayApp> with WindowListener {
                   onToggleTop: () => s.settings.overlayAlwaysOnTop = !_onTop,
                   onOpenMain: platform.showMain,
                   onAdd: () => platform.quickAddInMain(),
-                  // Hides the overlay until Ergon starts again (turn it off for
+                  // Hides the overlay until Overdue starts again (turn it off for
                   // good in Settings).
                   onClose: windowManager.close,
                 ),
@@ -330,7 +330,7 @@ class _OverlayHeader extends StatelessWidget {
             onToggleTop,
             active: onTop,
           ),
-          btn(Icons.open_in_new, 'Open Ergon', onOpenMain),
+          btn(Icons.open_in_new, 'Open Overdue', onOpenMain),
           btn(Icons.close, 'Close overlay', onClose),
           const SizedBox(width: 4),
         ],

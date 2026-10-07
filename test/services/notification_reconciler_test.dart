@@ -1,11 +1,11 @@
-import 'package:ergon/src/core/local_date.dart';
-import 'package:ergon/src/domain/enums.dart';
-import 'package:ergon/src/domain/models.dart';
-import 'package:ergon/src/domain/recurrence.dart';
-import 'package:ergon/src/services/notifications/notification_gateway.dart';
-import 'package:ergon/src/services/notifications/notification_payload.dart';
-import 'package:ergon/src/services/notifications/notification_reconciler.dart';
-import 'package:ergon/src/services/notifications/reminder_planner.dart';
+import 'package:overdue/src/core/local_date.dart';
+import 'package:overdue/src/domain/enums.dart';
+import 'package:overdue/src/domain/models.dart';
+import 'package:overdue/src/domain/recurrence.dart';
+import 'package:overdue/src/services/notifications/notification_gateway.dart';
+import 'package:overdue/src/services/notifications/notification_payload.dart';
+import 'package:overdue/src/services/notifications/notification_reconciler.dart';
+import 'package:overdue/src/services/notifications/reminder_planner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';

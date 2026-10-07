@@ -9,7 +9,7 @@ import 'notification_gateway.dart';
 import 'notification_payload.dart';
 import 'reminder_planner.dart';
 
-const _channelId = 'ergon_reminders';
+const _channelId = 'overdue_reminders';
 
 /// Top-level `@pragma('vm:entry-point')` handler for notification actions
 /// tapped while the app is not running (Android). Set from `main.dart`.
@@ -22,12 +22,16 @@ abstract class _PluginGatewayBase extends NotificationGateway {
   final FlutterLocalNotificationsPlugin plugin;
   NotificationResponseHandler? _handler;
 
-  static const _windowsGuid = '6f1f2a4e-6c1b-4f0a-9a63-6b1d0d6c9a21';
+  static const _windowsGuid = '58dd19e3-818e-4324-9daa-bc418a50b4e1';
 
   InitializationSettings get _settings => const InitializationSettings(
     android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     linux: LinuxInitializationSettings(defaultActionName: 'Open'),
-    windows: WindowsInitializationSettings(appName: 'Ergon', appUserModelId: 'Ergon.TaskManager', guid: _windowsGuid),
+    windows: WindowsInitializationSettings(
+      appName: 'Overdue',
+      appUserModelId: 'Overdue.TaskManager',
+      guid: _windowsGuid,
+    ),
   );
 
   @override

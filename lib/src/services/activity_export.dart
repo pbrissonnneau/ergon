@@ -127,7 +127,7 @@ class ActivityExportService {
     final yaml = buildYaml(range, history, created, generatedAt: _clock.now(), partial: partial);
     final dir = folder;
     await dir.create(recursive: true);
-    final file = File(p.join(dir.path, 'ergon-activity-${range.label}.yaml'));
+    final file = File(p.join(dir.path, 'overdue-activity-${range.label}.yaml'));
     final tmp = File('${file.path}.tmp');
     await tmp.writeAsString(yaml, flush: true);
     return tmp.rename(file.path); // Never leave a half-written file behind.
@@ -156,7 +156,7 @@ class ActivityExportService {
     }
 
     final b = StringBuffer()
-      ..writeln('# Ergon activity export')
+      ..writeln('# Overdue activity export')
       ..writeln('period: ${_q(range.label)}')
       ..writeln('from: ${range.from}')
       ..writeln('to: ${range.to}')

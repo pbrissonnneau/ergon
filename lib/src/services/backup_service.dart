@@ -41,9 +41,12 @@ class BackupService {
   Directory defaultFolder;
   final Clock _clock;
 
-  static const _prefix = 'ergon-';
+  static const _prefix = 'overdue-';
+  // Backups written before the app was renamed from Ergon: still listed (so
+  // they can be restored) and pruned like the others.
+  static const _legacyPrefix = 'ergon-';
   static const _ext = '.sqlite';
-  static final _dailyName = RegExp(r'^ergon-\d{4}-\d{2}-\d{2}\.sqlite$');
+  static final _dailyName = RegExp(r'^(overdue|ergon)-\d{4}-\d{2}-\d{2}\.sqlite$');
 
   Directory get folder {
     final custom = settings.backupFolder;
@@ -88,7 +91,7 @@ class BackupService {
     final out = <BackupFile>[];
     await for (final e in dir.list()) {
       final name = p.basename(e.path);
-      if (e is File && name.startsWith(_prefix) && name.endsWith(_ext)) {
+      if (e is File && (name.startsWith(_prefix) || name.startsWith(_legacyPrefix)) && name.endsWith(_ext)) {
         final st = await e.stat();
         out.add(BackupFile(e, st.modified, st.size));
       }
@@ -101,7 +104,7 @@ class BackupService {
   /// and pre-restore backups are never deleted automatically.
   Future<void> prune() async {
     final daily = (await list()).where((b) => _dailyName.hasMatch(b.name)).toList()
-      ..sort((a, b) => b.name.compareTo(a.name)); // Names sort by date.
+      ..sort((a, b) => b.name.compareTo(a.name)); // Names sort by date (legacy ergon-… last).
     for (final old in daily.skip(settings.backupKeep)) {
       try {
         await old.file.delete();
@@ -120,13 +123,13 @@ class BackupService {
 
   /// Called at start-up *before* opening the database. If a restore is
   /// pending, the current database is first saved next to the backups
-  /// (`ergon-before-restore-….sqlite`), then replaced. Returns a message for
+  /// (`overdue-before-restore-….sqlite`), then replaced. Returns a message for
   /// the user, or null when nothing happened.
   static Future<String?> applyPendingRestore(Directory dataDir) async {
     final marker = _marker(dataDir);
     if (!await marker.exists()) return null;
     final source = File((await marker.readAsString()).trim());
-    final live = File(p.join(dataDir.path, 'ergon.sqlite'));
+    final live = File(p.join(dataDir.path, 'overdue.sqlite'));
     // The overlay may take a moment to close and release the file.
     for (var attempt = 0; ; attempt++) {
       final result = await _swap(marker, source, live);
@@ -146,7 +149,7 @@ class BackupService {
         // Safety copy of the current data (with its WAL, which may hold the
         // latest committed changes), once per minute at most across retries.
         final stamp = DateTime.now().toIso8601String().replaceAll(':', '').substring(0, 13);
-        final safety = File(p.join(source.parent.path, 'ergon-before-restore-$stamp.sqlite'));
+        final safety = File(p.join(source.parent.path, 'overdue-before-restore-$stamp.sqlite'));
         if (!await safety.exists()) {
           await live.copy(safety.path);
           final wal = File('${live.path}-wal');
@@ -163,11 +166,11 @@ class BackupService {
       await marker.delete();
       return (true, 'Backup restored: ${p.basename(source.path)}');
     } on FileSystemException catch (e) {
-      // Typically another Ergon process (the overlay) still has the file open.
+      // Typically another Overdue process (the overlay) still has the file open.
       return (
         false,
         'Could not restore yet (${e.osError?.message ?? e.message}). '
-            'Close all Ergon windows, including the overlay, and start Ergon again.',
+            'Close all Overdue windows, including the overlay, and start Overdue again.',
       );
     }
   }

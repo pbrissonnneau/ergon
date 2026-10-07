@@ -1,10 +1,10 @@
-import 'package:ergon/src/app/app_services.dart';
-import 'package:ergon/src/app/ergon_app.dart';
-import 'package:ergon/src/core/local_date.dart';
-import 'package:ergon/src/data/database_opener.dart';
-import 'package:ergon/src/domain/enums.dart';
-import 'package:ergon/src/domain/models.dart';
-import 'package:ergon/src/platform/platform_integration.dart';
+import 'package:overdue/src/app/app_services.dart';
+import 'package:overdue/src/app/overdue_app.dart';
+import 'package:overdue/src/core/local_date.dart';
+import 'package:overdue/src/data/database_opener.dart';
+import 'package:overdue/src/domain/enums.dart';
+import 'package:overdue/src/domain/models.dart';
+import 'package:overdue/src/platform/platform_integration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +23,7 @@ void main() {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(ErgonApp(services: services, dataPath: '/tmp'));
+    await tester.pumpWidget(OverdueApp(services: services, dataPath: '/tmp'));
     await settle(tester);
   }
 

@@ -1,5 +1,5 @@
-import 'package:ergon/src/domain/models.dart';
-import 'package:ergon/src/ui/widgets/day_mosaic.dart';
+import 'package:overdue/src/domain/models.dart';
+import 'package:overdue/src/ui/widgets/day_mosaic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

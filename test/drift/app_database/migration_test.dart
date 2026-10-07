@@ -3,14 +3,14 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift_dev/api/migrations_native.dart';
-import 'package:ergon/src/core/local_date.dart';
-import 'package:ergon/src/data/database.dart';
-import 'package:ergon/src/data/database_opener.dart';
-import 'package:ergon/src/data/migrations.dart';
-import 'package:ergon/src/data/task_repository.dart';
-import 'package:ergon/src/domain/models.dart';
-import 'package:ergon/src/domain/recurrence.dart';
-import 'package:ergon/src/domain/task_query.dart';
+import 'package:overdue/src/core/local_date.dart';
+import 'package:overdue/src/data/database.dart';
+import 'package:overdue/src/data/database_opener.dart';
+import 'package:overdue/src/data/migrations.dart';
+import 'package:overdue/src/data/task_repository.dart';
+import 'package:overdue/src/domain/models.dart';
+import 'package:overdue/src/domain/recurrence.dart';
+import 'package:overdue/src/domain/task_query.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'generated/schema.dart';
@@ -169,7 +169,7 @@ void main() {
   });
 
   test('data survives closing and reopening the database file (restart / update)', () async {
-    final dir = await Directory.systemTemp.createTemp('ergon_db_');
+    final dir = await Directory.systemTemp.createTemp('overdue_db_');
     try {
       var db = openAppDatabase(dir);
       var repo = TaskRepository(db, clock: FixedClock(DateTime(2026, 10, 4, 9)));

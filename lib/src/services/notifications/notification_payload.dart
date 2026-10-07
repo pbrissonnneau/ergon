@@ -4,7 +4,7 @@ enum NotificationAction { open, complete, snooze }
 
 /// Compact, versionless string payload attached to notifications.
 ///
-/// Format: `ergon;t=<taskId>[;d=<epochDay>][;r=<reminderId>]`, optionally
+/// Format: `overdue;t=<taskId>[;d=<epochDay>][;r=<reminderId>]`, optionally
 /// prefixed with `<action>|` when a platform reports the action through the
 /// payload itself (Windows toast arguments).
 class NotificationPayload {
@@ -15,7 +15,7 @@ class NotificationPayload {
   final int? reminderId;
 
   String encode() => [
-    'ergon',
+    'overdue',
     't=$taskId',
     if (occurrenceDate != null) 'd=${occurrenceDate!.epochDay}',
     if (reminderId != null) 'r=$reminderId',
@@ -37,7 +37,7 @@ class NotificationPayload {
       if (a != null) action = a;
     }
     final parts = body.split(';');
-    if (parts.isEmpty || parts.first != 'ergon') return null;
+    if (parts.isEmpty || parts.first != 'overdue') return null;
     int? t, d, r;
     for (final p in parts.skip(1)) {
       final eq = p.indexOf('=');

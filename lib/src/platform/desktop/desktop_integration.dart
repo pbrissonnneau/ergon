@@ -117,7 +117,7 @@ class DesktopIntegration extends PlatformIntegration {
   Future<Directory> defaultBackupFolder(Directory dataDir) async {
     try {
       // Visible to the user and independent of the app's own data folder.
-      return Directory(p.join((await getApplicationDocumentsDirectory()).path, 'Ergon backups'));
+      return Directory(p.join((await getApplicationDocumentsDirectory()).path, 'Overdue backups'));
     } catch (_) {
       return super.defaultBackupFolder(dataDir);
     }

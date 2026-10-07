@@ -1,13 +1,13 @@
 import 'dart:io';
 
-import 'package:ergon/src/app/app_services.dart';
-import 'package:ergon/src/core/local_date.dart';
-import 'package:ergon/src/data/database_opener.dart';
-import 'package:ergon/src/data/task_repository.dart';
-import 'package:ergon/src/domain/enums.dart';
-import 'package:ergon/src/domain/models.dart';
-import 'package:ergon/src/platform/platform_integration.dart';
-import 'package:ergon/src/services/activity_export.dart';
+import 'package:overdue/src/app/app_services.dart';
+import 'package:overdue/src/core/local_date.dart';
+import 'package:overdue/src/data/database_opener.dart';
+import 'package:overdue/src/data/task_repository.dart';
+import 'package:overdue/src/domain/enums.dart';
+import 'package:overdue/src/domain/models.dart';
+import 'package:overdue/src/platform/platform_integration.dart';
+import 'package:overdue/src/services/activity_export.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -33,7 +33,7 @@ void main() {
     setUp(() async {
       clock = FixedClock(DateTime(2026, 10, 6, 9));
       app = await AppServices.create(db: openMemoryDatabase(), platform: HeadlessIntegration(), clock: clock);
-      dir = await Directory.systemTemp.createTemp('ergon_export');
+      dir = await Directory.systemTemp.createTemp('overdue_export');
       app.exports.defaultFolder = dir;
     });
     tearDown(() async {
@@ -45,7 +45,7 @@ void main() {
       expect(await app.exports.runIfDue(), isEmpty);
       await app.settings.setRaw(ActivityExportService.enabledKey, '1');
       final files = await app.exports.runIfDue();
-      expect(files.map((f) => f.uri.pathSegments.last), ['ergon-activity-2026-09.yaml']);
+      expect(files.map((f) => f.uri.pathSegments.last), ['overdue-activity-2026-09.yaml']);
       expect(await app.exports.runIfDue(), isEmpty, reason: 'already exported');
     });
 
@@ -60,7 +60,7 @@ void main() {
 
       final file = await app.exports.exportNow();
       final yaml = await file.readAsString();
-      expect(file.uri.pathSegments.last, 'ergon-activity-2026-10.yaml');
+      expect(file.uri.pathSegments.last, 'overdue-activity-2026-10.yaml');
       expect(yaml, contains('period: "2026-10"'));
       expect(yaml, contains('complete: false'));
       expect(yaml, contains('  completed: 1\n  postponed: 1\n  created: 2'));

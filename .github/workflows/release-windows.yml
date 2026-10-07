@@ -68,7 +68,7 @@ jobs:
         run: |
           $out = "build\windows\x64\runner\Release"
           Get-ChildItem $out
-          if (-not (Test-Path "$out\ergon.exe")) { throw "ergon.exe was not produced" }
+          if (-not (Test-Path "$out\overdue.exe")) { throw "overdue.exe was not produced" }
 
       - name: Package encrypted archive
         shell: pwsh
@@ -80,16 +80,16 @@ jobs:
           }
           $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)').Matches[0].Groups[1].Value
           $sha = "${{ github.sha }}".Substring(0, 7)
-          $name = "ergon-windows-x64-$version-$sha"
+          $name = "overdue-windows-x64-$version-$sha"
           New-Item -ItemType Directory -Force dist | Out-Null
           # Stage as a folder named like the archive so it extracts cleanly.
           Copy-Item -Recurse "build\windows\x64\runner\Release" "dist\$name"
           @"
-          Ergon $version ($sha) for Windows x64
+          Overdue $version ($sha) for Windows x64
           1. Extract this archive anywhere you can write to (no admin rights needed).
-          2. Run ergon.exe. Keep the whole folder together (DLLs and data\ are required).
-          Optional: run "ergon.exe --overlay" for the desktop overlay.
-          Data is stored in %APPDATA%\Ergon\Ergon\.
+          2. Run overdue.exe. Keep the whole folder together (DLLs and data\ are required).
+          Optional: run "overdue.exe --overlay" for the desktop overlay.
+          Data is stored in %APPDATA%\Overdue\Overdue\.
           "@ | Set-Content "dist\$name\README.txt"
           Push-Location dist
           # -mhe=on encrypts file names; AES-256 is 7z's default cipher.

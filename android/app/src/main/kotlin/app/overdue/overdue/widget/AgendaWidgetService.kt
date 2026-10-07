@@ -1,12 +1,12 @@
-package app.ergon.ergon.widget
+package app.overdue.overdue.widget
 
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
-import app.ergon.ergon.MainActivity
-import app.ergon.ergon.R
+import app.overdue.overdue.MainActivity
+import app.overdue.overdue.R
 
 class AgendaWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory = Factory(applicationContext)
